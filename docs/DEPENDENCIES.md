@@ -14,7 +14,18 @@ exploit in the packaged IDE. The upgraded unit and integration tests pass.
 
 The four-target audit found maintenance advisories for the following transitive
 dependencies. The reviewed graph has no compatible replacement for these
-packages through Tauri; no security vulnerability advisory is waived.
+packages through Tauri.
+
+GitHub additionally identified
+[RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) in
+GLib 0.18.5. The initial audit's default excluded transitive unsoundness
+notices; `unsound = "all"` now makes these blocking. Tauri's Linux GTK3 stack
+requires this GLib version family, so Emdeck vendors the published crate with
+the upstream two-line iterator fix as `0.18.5+emdeck.1`. See
+[the backport record](../src-tauri/vendor/README.md). The audit verifies source
+hashes and the resolved Cargo graph because cargo-deny does not match registry
+advisories against local path packages. Linux CI exercises the existing iterator
+tests with optimization. No GLib advisory is ignored in the audit configuration.
 
 | Advisory                                                              | Package            | Dependency path                       |
 | --------------------------------------------------------------------- | ------------------ | ------------------------------------- |
@@ -25,7 +36,7 @@ packages through Tauri; no security vulnerability advisory is waived.
 | [RUSTSEC-2025-0098](https://rustsec.org/advisories/RUSTSEC-2025-0098) | unic-ucd-version   | Tauri utilities → urlpattern          |
 | [RUSTSEC-2025-0100](https://rustsec.org/advisories/RUSTSEC-2025-0100) | unic-ucd-ident     | Tauri utilities → urlpattern          |
 
-`deny.toml` acknowledges only these exact advisory IDs with reasons. All new
+`deny.toml` acknowledges only these exact maintenance IDs with reasons. All new
 advisories remain blocking. Unused acknowledgments fail CI, so they must be
 removed when an upstream update eliminates the dependency. Review this table
 with every Tauri update and before each release; an acknowledgment is not a fix

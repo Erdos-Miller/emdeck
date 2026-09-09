@@ -29,7 +29,9 @@ try {
             if ((Get-AuthenticodeSignature -LiteralPath $signedFile).Status -ne 'Valid') { throw 'Invalid release signature.' }
         }
     }
-    $startedApp = Start-Process -FilePath $executable -WindowStyle Hidden -PassThru
+    # The application under test needs a visible top-level window: .NET's
+    # MainWindowHandle excludes hidden windows. Installers remain hidden.
+    $startedApp = Start-Process -FilePath $executable -PassThru
     $deadline = (Get-Date).AddSeconds(30)
     do {
         Start-Sleep -Milliseconds 500

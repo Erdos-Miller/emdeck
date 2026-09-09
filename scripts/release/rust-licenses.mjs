@@ -28,9 +28,11 @@ for (const license of report.licenses) {
   lines.push(`## ${license.name}`, '', 'Used by:', '');
   for (const used of license.used_by) {
     const pkg = used.crate;
-    lines.push(
-      `- ${pkg.name} ${pkg.version} — https://crates.io/crates/${pkg.name}/${pkg.version}`
-    );
+    const source =
+      pkg.name === 'glib' && pkg.version === '0.18.5+emdeck.1'
+        ? 'https://github.com/Erdos-Miller/emdeck/tree/main/src-tauri/vendor/glib'
+        : `https://crates.io/crates/${pkg.name}/${pkg.version}`;
+    lines.push(`- ${pkg.name} ${pkg.version} — ${source}`);
   }
   lines.push(
     '',
