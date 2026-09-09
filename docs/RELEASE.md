@@ -62,16 +62,22 @@ acknowledgments; no security vulnerability is waived.
   installs the `.deb`, opens a native window under Xvfb, requests a normal close
   and removes the package. This is not proof of upgrade compatibility with every
   historical version.
-- **Draft release:** a version tag runs checks, then packaging, then creates a
-  draft GitHub prerelease with installers, source-commit manifests, notices and
-  SHA-256 checksums. The tag must match package/Cargo/Tauri versions and the
-  changelog. Failed target builds prevent creation of a partial draft.
+- **Draft release:** manually select an existing version tag to run checks, then
+  packaging, then create a draft GitHub prerelease with installers,
+  source-commit manifests, notices and SHA-256 checksums. The tag must match
+  package/Cargo/Tauri versions and the changelog. Failed target builds prevent
+  creation of a partial draft.
 
-Tag pushes require signing. To deliberately prepare an unsigned beta draft,
-manually run Draft release for an existing tag with `signed=false`; the release
-notes label it unsigned. Workflows never silently downgrade signed builds to
-unsigned. Review the complete draft and actual platform validation before
+Push the version tag, then manually run Draft release for that tag. The signing
+input defaults to true; choose `signed=false` for an explicitly approved
+unsigned beta. Tag pushes alone do not publish or build a release. The release
+notes label unsigned builds, and the workflow never silently downgrades signed
+builds. Review the complete draft and actual platform validation before
 publishing it. Normal repository checks cannot create releases.
+
+```sh
+gh workflow run release.yml --ref main -f tag=v0.1.20 -f signed=false
+```
 
 ## Signing setup
 

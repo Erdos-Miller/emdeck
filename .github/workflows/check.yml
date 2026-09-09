@@ -11,6 +11,9 @@ on:
         required: false
 permissions:
   contents: read
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.ref || 'default' }}
+  cancel-in-progress: true
 jobs:
   security:
     uses: ./.github/workflows/security.yml

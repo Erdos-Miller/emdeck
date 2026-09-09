@@ -53,7 +53,7 @@ test('Git diffs open in reusable staged and working tabs while edits and termina
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(editor).toBeHidden();
   await expect(page.getByTitle('Save current file', { exact: true })).toBeDisabled();
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press('ControlOrMeta+s');
   expect(
     await page.evaluate(() =>
       (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls.filter(
@@ -85,7 +85,7 @@ test('Git diffs open in reusable staged and working tabs while edits and termina
   await expect(editor).toContainText('unsaved draft');
   await expect(terminal).toHaveAttribute('data-terminal-marker', 'kept');
   await page.getByRole('tab', { name: 'notes.ts Working', exact: true }).click();
-  await page.keyboard.press('Control+w');
+  await page.keyboard.press('ControlOrMeta+w');
   await expect(page.getByRole('tab', { name: 'notes.ts Working', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Unsaved', { exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -150,7 +150,7 @@ test('a closed pending diff cannot reopen a tab or steal focus when its response
   await expect(
     page.getByRole('region', { name: 'Working diff: src/other.ts', exact: true })
   ).toContainText('Loading diff…');
-  await page.keyboard.press('Control+w');
+  await page.keyboard.press('ControlOrMeta+w');
   await expect(page.getByTestId('code-editor')).toBeVisible();
   await page.evaluate(() => {
     (window as unknown as { __emdeckReleaseDiff: () => void }).__emdeckReleaseDiff();

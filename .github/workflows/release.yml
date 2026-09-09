@@ -1,7 +1,5 @@
 name: Draft release
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
@@ -27,7 +25,7 @@ jobs:
     uses: ./.github/workflows/package.yml
     with:
       ref: ${{ inputs.tag || github.ref }}
-      signed: ${{ github.event_name == 'push' || inputs.signed }}
+      signed: ${{ inputs.signed }}
     secrets: inherit
   draft:
     needs: [check, package]
@@ -37,7 +35,7 @@ jobs:
       contents: write
     env:
       EMDECK_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-      EMDECK_SIGNED: ${{ (github.event_name == 'push' || inputs.signed) && 'true' || 'false' }}
+      EMDECK_SIGNED: ${{ inputs.signed && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

@@ -207,7 +207,7 @@ test('opening another project defaults to a new window and keeps edits and termi
 }) => {
   await page.getByRole('treeitem', { name: /notes.ts/ }).click();
   await page.getByTestId('code-editor').locator('.cm-content').click();
-  await page.keyboard.press('Control+End');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End');
   await page.keyboard.type('// unsaved work');
   await page.getByRole('button', { name: 'Start a terminal', exact: true }).click();
   const terminal = page.getByRole('region', { name: 'Terminal terminal' });
@@ -215,7 +215,7 @@ test('opening another project defaults to a new window and keeps edits and termi
   await terminal
     .locator('.xterm')
     .evaluate(element => element.setAttribute('data-session', 'existing'));
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('ControlOrMeta+o');
   await expect(page.getByRole('status')).toContainText('Project opened in a new Emdeck window.');
   await expect(page.locator('.project-switch')).toContainText('first');
   await expect(page.getByLabel('Unsaved', { exact: true })).toBeVisible();
@@ -267,7 +267,7 @@ test('window creation failure and folder picker cancellation preserve the projec
     const state = window as unknown as Record<string, unknown>;
     state.__emdeckPicker = null;
   });
-  await page.keyboard.press('Control+Shift+o');
+  await page.keyboard.press('ControlOrMeta+Shift+o');
   await expect
     .poll(() =>
       page.evaluate(

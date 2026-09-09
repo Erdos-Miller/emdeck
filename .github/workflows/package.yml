@@ -33,6 +33,9 @@ on:
         required: false
 permissions:
   contents: read
+concurrency:
+  group: package-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
 jobs:
   package:
     name: Package ${{ matrix.label }}
@@ -148,7 +151,7 @@ jobs:
           path: |
             .tmp/install-performance.json
             .tmp/desktop-test-*/*.png
-            .tmp/desktop-test-*/six-terminal-performance.json
+            .tmp/desktop-test-*/*-performance.json
           if-no-files-found: ignore
       - name: Remove Windows signing certificate
         if: always() && runner.os == 'Windows' && inputs.signed
