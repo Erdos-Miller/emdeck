@@ -15,6 +15,9 @@ use tauri::ipc::Channel;
 #[cfg(test)]
 mod stress;
 
+#[cfg(all(test, windows))]
+mod environment_tests;
+
 #[derive(Clone, Serialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum TerminalEvent {
@@ -94,6 +97,12 @@ fn shell_command(shell: &str, command: &str, cwd: &Path) -> CommandBuilder {
         .to_string_lossy()
         .to_lowercase();
     let mut cmd = CommandBuilder::new(program.clone());
+    // portable-pty refreshes Windows variables from the registry. Preserve
+    // process overrides (including PATH entries from a shell or tool manager).
+    #[cfg(windows)]
+    for (key, value) in std::env::vars_os() {
+        cmd.env(key, value);
+    }
     if !command.trim().is_empty() {
         match name.as_str() {
             "powershell" | "pwsh" => {

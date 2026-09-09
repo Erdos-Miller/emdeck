@@ -1,7 +1,7 @@
 {
   "name": "emdeck-ide",
   "private": true,
-  "version": "0.1.21",
+  "version": "0.1.22",
   "license": "Apache-2.0",
   "author": "Erdos Miller",
   "description": "A lightweight open-source workspace for agent-driven development",
