@@ -148,10 +148,12 @@ jobs:
         if: always() && runner.os == 'Windows'
         with:
           name: native-windows-evidence
+          include-hidden-files: true
           path: |
             .tmp/install-performance.json
             .tmp/desktop-test-*/*.png
             .tmp/desktop-test-*/*-performance.json
+            .tmp/desktop-test-*/startup.log
           if-no-files-found: ignore
       - name: Remove Windows signing certificate
         if: always() && runner.os == 'Windows' && inputs.signed

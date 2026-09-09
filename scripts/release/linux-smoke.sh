@@ -2,6 +2,10 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true && -n "${RUNNER_TEMP:-}" ]] || { echo 'Use a disposable GitHub runner.' >&2; exit 1; }
 test_root=$(mktemp -d "$RUNNER_TEMP/emdeck-smoke.XXXXXX")
+for notice in LICENSE NOTICE THIRD_PARTY_NOTICES.md JAVASCRIPT.md RUST.md; do
+  notice_path=$(dpkg-query -L emdeck | awk -v suffix="/licenses/$notice" 'substr($0, length($0) - length(suffix) + 1) == suffix { print; exit }')
+  [[ -n "$notice_path" && -f "$notice_path" ]] || { echo "Missing installed notice: $notice" >&2; exit 1; }
+done
 export XDG_CONFIG_HOME="$test_root/config" XDG_CACHE_HOME="$test_root/cache" XDG_DATA_HOME="$test_root/data"
 mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME"
 openbox > "$test_root/window-manager.log" 2>&1 &

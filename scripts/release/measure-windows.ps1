@@ -32,6 +32,7 @@ while ((Get-Date) -lt $deadline) {
         if (-not $process) { continue }
         $identity = "$processId/$($process.StartTime.Ticks)"
         $nextCpu[$identity] = $process.CPU
+        # 0.0 selects the floating-point overload; integer 0 truncates short CPU deltas.
         if ($previousCpu.ContainsKey($identity)) { $cpu += [Math]::Max(0.0, $process.CPU - $previousCpu[$identity]) }
         $workingSet += $process.WorkingSet64
         $privateBytes += $process.PrivateMemorySize64

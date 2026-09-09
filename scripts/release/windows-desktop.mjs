@@ -1,7 +1,7 @@
 // Tests the real packaged WebView and native IPC, using an isolated profile.
 // CDP is enabled only in this test process, following playwright.dev/docs/webview2.
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -23,7 +23,7 @@ await new Promise(resolve => server.close(resolve));
 const app = spawn(executable, [], {
   // This is the interactive application under test, including visible-window measurements.
   windowsHide: false,
-  stdio: 'ignore',
+  stdio: ['ignore', 'pipe', 'pipe'],
   env: {
     ...process.env,
     WEBVIEW2_USER_DATA_FOLDER: join(directory, 'profile'),
@@ -31,6 +31,13 @@ const app = spawn(executable, [], {
   },
 });
 let processError;
+let startupLogBytes = 0;
+const recordStartup = bytes => {
+  if (startupLogBytes < 256 * 1024) appendFileSync(join(directory, 'startup.log'), bytes);
+  startupLogBytes += bytes.length;
+};
+app.stdout.on('data', recordStartup);
+app.stderr.on('data', recordStartup);
 app.on('error', error => {
   processError = error;
 });
@@ -64,17 +71,19 @@ const measure = async name => {
   );
 };
 try {
+  let connectionError;
   for (let attempt = 0; attempt < 60; attempt++) {
     if (processError) throw processError;
     if (app.exitCode !== null) throw new Error(`Application exited: ${app.exitCode}`);
     try {
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 1000 });
       break;
-    } catch {
+    } catch (error) {
+      connectionError = error.message;
       await delay(1000);
     }
   }
-  if (!browser) throw new Error('Native WebView did not start.');
+  if (!browser) throw new Error(`Native WebView connection failed: ${connectionError}`);
   const context = browser.contexts()[0];
   page = context.pages()[0] ?? (await context.waitForEvent('page'));
   page.setDefaultTimeout(15000);
