@@ -1,6 +1,6 @@
 # Release process and readiness
 
-The first public beta candidate is **0.1.20**. This document distinguishes
+The first public beta candidate is **0.1.21**. This document distinguishes
 implemented release tooling from validation that still needs a real runner or
 signing account. A compiled binary alone is not release approval.
 
@@ -77,7 +77,7 @@ builds. Review the complete draft and actual platform validation before
 publishing it. Normal repository checks cannot create releases.
 
 ```sh
-gh workflow run release.yml --ref main -f tag=v0.1.20 -f signed=false
+gh workflow run release.yml --ref main -f tag=v0.1.21 -f signed=false
 ```
 
 ## Signing setup

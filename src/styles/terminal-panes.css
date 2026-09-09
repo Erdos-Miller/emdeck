@@ -115,7 +115,9 @@
 }
 
 .terminal-host .xterm {
-  height: 100%;
+  /* Let xterm's screen size the viewport. A percentage height lets the browser
+     clamp scrollTop before FitAddon resizes the rows, losing output following. */
+  height: auto;
 }
 
 /* Keep the scrollbar gutter stable so hovering never resizes a session. */

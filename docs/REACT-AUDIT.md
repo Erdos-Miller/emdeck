@@ -1,5 +1,18 @@
 # React audit — 0.1.19
 
+## 0.1.21 follow-up
+
+The same pinned audit was repeated for the terminal fitting change: four
+previously reviewed errors remain, with 53 advisory warnings. The additional
+warning is `plugin-update-trust-risk` in the manual Windows installer review
+workflow. It downloads and executes the maintainer-selected artifact from this
+repository in a disposable GitHub runner, verifies its version/target, and uses
+read-only repository/actions permissions. That execution is the purpose of the
+installer test; it is not an application updater or an automatic PR download. No
+warning or error rule was suppressed.
+
+## Architecture audit
+
 React Doctor 0.9.13 was run against the saved pre-refactor source and the final
 source, with score, telemetry and supply-chain network checks disabled. Both
 scans completed. The baseline was an isolated temporary checkout so the parent's
