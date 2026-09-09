@@ -20,6 +20,24 @@ const server = createServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
 await new Promise(resolve => server.close(resolve));
+const policy = mode =>
+  execFileSync(
+    'pwsh',
+    [
+      '-NoProfile',
+      '-File',
+      join(root, 'scripts/release/windows-webview-policy.ps1'),
+      '-Mode',
+      mode,
+      '-Profile',
+      join(directory, 'profile'),
+      '-Port',
+      String(port),
+    ],
+    { windowsHide: true, stdio: 'inherit' }
+  );
+const runnerPolicy = process.env.GITHUB_ACTIONS === 'true';
+if (runnerPolicy) policy('Configure');
 const app = spawn(executable, [], {
   // This is the interactive application under test, including visible-window measurements.
   windowsHide: false,
@@ -109,6 +127,7 @@ try {
   await editor.click();
   await page.keyboard.press('Control+End');
   await page.keyboard.insertText('// Native save verified\n');
+  await expect(editor).toContainText('Native save verified');
   await page.keyboard.press('Control+s');
   await expect
     .poll(() => readFileSync(join(project, 'demo.ts'), 'utf8'))
@@ -166,4 +185,5 @@ try {
 } finally {
   if (browser) await browser.close().catch(() => {});
   if (app.exitCode === null) app.kill();
+  if (runnerPolicy) policy('Remove');
 }

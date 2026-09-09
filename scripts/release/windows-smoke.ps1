@@ -21,7 +21,7 @@ try {
     Invoke-Installer
     if (-not (Test-Path -LiteralPath $executable)) { throw 'Installed executable missing.' }
     if ((Get-Item -LiteralPath $executable).VersionInfo.ProductVersion -ne $version) { throw 'Installed version mismatch.' }
-    foreach ($notice in @('LICENSE', 'THIRD_PARTY_NOTICES.md', 'JAVASCRIPT.md', 'RUST.md')) {
+    foreach ($notice in @('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'JAVASCRIPT.md', 'RUST.md')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installPath "licenses/$notice"))) { throw "Missing bundled notice: $notice" }
     }
     if ($env:EMDECK_SIGNED -eq 'true') {

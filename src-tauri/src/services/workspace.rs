@@ -149,18 +149,38 @@ pub fn save(root: &Path, relative: &str, content: &str, expected: &str) -> Resul
     temp.write_all(content.as_bytes()).map_err(err)?;
     temp.as_file().set_permissions(permissions).map_err(err)?;
     temp.as_file().sync_all().map_err(err)?;
-    // Check again after preparing the replacement to narrow the external-writer race.
-    if revision(&read_bytes(&path)?) != expected {
-        return Err(
-            "EXTERNAL_CHANGE: The file changed while saving. Your edits are still in the editor."
-                .into(),
-        );
-    }
-    temp.persist(&path).map_err(err)?;
+    persist_document(temp, &path, expected)?;
     Ok(Document {
         content: content.into(),
         revision: revision(content.as_bytes()),
     })
+}
+
+fn persist_document(mut temp: tempfile::NamedTempFile, path: &Path, expected: &str) -> Result<()> {
+    for attempt in 0..6 {
+        // Revalidate after every wait: an agent may have edited the target meanwhile.
+        if revision(&read_bytes(path)?) != expected {
+            return Err(
+                "EXTERNAL_CHANGE: The file changed while saving. Your edits are still in the editor."
+                    .into(),
+            );
+        }
+        match temp.persist(path) {
+            Ok(_) => return Ok(()),
+            Err(failure)
+                if cfg!(windows)
+                    && attempt < 5
+                    && matches!(failure.error.raw_os_error(), Some(5 | 32 | 33)) =>
+            {
+                // Windows scanners/readers can briefly deny replacement. Keep the
+                // original intact and retry the same atomic rename for at most 500 ms.
+                temp = failure.file;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            Err(failure) => return Err(err(failure)),
+        }
+    }
+    unreachable!("the final attempt returns its error")
 }
 
 pub fn create(root: &Path, relative: &str, directory: bool) -> Result<()> {
@@ -249,6 +269,68 @@ pub fn remove(root: &Path, relative: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    #[test]
+    fn saves_after_a_temporary_windows_replacement_lock() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        let path = root.join("locked.txt");
+        fs::write(&path, "original").unwrap();
+        let lock = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(3)
+            .open(&path)
+            .unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            drop(lock);
+        });
+        save(&root, "locked.txt", "saved", &revision(b"original")).unwrap();
+        release.join().unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), "saved");
+    }
+    #[cfg(windows)]
+    #[test]
+    fn persistent_windows_lock_preserves_the_original() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        let path = root.join("locked.txt");
+        fs::write(&path, "original").unwrap();
+        let lock = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(3)
+            .open(&path)
+            .unwrap();
+        assert!(save(&root, "locked.txt", "saved", &revision(b"original")).is_err());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "original");
+        drop(lock);
+        assert_eq!(fs::read_dir(root).unwrap().count(), 1);
+    }
+    #[cfg(windows)]
+    #[test]
+    fn retry_rejects_an_external_write_during_a_windows_lock() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        let path = root.join("locked.txt");
+        fs::write(&path, "original").unwrap();
+        let mut lock = fs::OpenOptions::new()
+            .write(true)
+            .share_mode(3)
+            .open(&path)
+            .unwrap();
+        let writer = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            lock.write_all(b"external").unwrap();
+            lock.sync_all().unwrap();
+        });
+        let error = save(&root, "locked.txt", "saved", &revision(b"original")).unwrap_err();
+        writer.join().unwrap();
+        assert!(error.starts_with("EXTERNAL_CHANGE"), "{error}");
+        assert_eq!(fs::read_to_string(path).unwrap(), "external");
+    }
     #[test]
     fn files_preserve_content_and_reject_stale_writes() {
         let dir = tempfile::tempdir().unwrap();
