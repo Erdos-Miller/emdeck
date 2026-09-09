@@ -13,7 +13,9 @@ app_pid=$!
 window_id=''
 for attempt in {1..60}; do
   kill -0 "$app_pid" || { cat "$test_root/application.log"; exit 1; }
-  window_id=$(wmctrl -lp | awk -v pid="$app_pid" '$3 == pid { print $1; exit }')
+  # The window manager initializes asynchronously; an absent client list is
+  # expected during startup, and the bounded loop retries it.
+  window_id=$(wmctrl -lp 2>/dev/null | awk -v pid="$app_pid" '$3 == pid { print $1; exit }' || true)
   [[ -n "$window_id" ]] && break
   sleep 1
 done

@@ -131,7 +131,7 @@ jobs:
         run: |
           sudo apt-get install -y ./src-tauri/target/"$RELEASE_TARGET"/release/bundle/deb/*.deb
           xvfb-run -a dbus-run-session -- bash scripts/release/linux-smoke.sh
-          sudo apt-get remove -y emdeck-ide
+          sudo apt-get remove -y emdeck
       - name: Windows installer smoke test
         if: runner.os == 'Windows'
         shell: pwsh
