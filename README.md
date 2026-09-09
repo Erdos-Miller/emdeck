@@ -6,10 +6,9 @@ A lightweight, Apache-2.0 open-source desktop workspace for agent-driven
 development by Erdos Miller. Built with **Tauri 2 + Rust**, **React +
 TypeScript**, **CodeMirror 6**, and **xterm.js**.
 
-**First public beta candidate.** Follow the
-[installation guide](docs/INSTALLATION.md) for available downloads and platform
-requirements. Actual completed checks and known gaps are recorded in
-[Validation](docs/VALIDATION.md).
+**Unsigned public beta.** Follow the [installation guide](docs/INSTALLATION.md)
+for available downloads and platform requirements. Actual completed checks and
+known gaps are recorded in [Validation](docs/VALIDATION.md).
 
 Open a project, edit a few files, and keep your terminal agents in view. Emdeck
 does not build a project index, run language servers, lint in the background, or
@@ -389,7 +388,7 @@ confines file operations to explicitly opened roots and rejects traversal and
 symlink escapes. Git metadata and project roots are protected from file
 mutations. Symlink copy/rename/trash is delegated to the system file manager.
 
-This is a beta candidate, not complete WebStorm feature parity. Remote branch
+This beta does not provide complete WebStorm feature parity. Remote branch
 deletion, force push, advanced worktree operations (move/lock/prune), an
 extension system, global indexed search, debugger integration and durable agent
 session restoration are future work.

@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium, expect } from '@playwright/test';
 import { root } from './tools.mjs';
+import { prepareProject, verifyNativeProject } from './native-project.mjs';
 
 if (process.platform !== 'win32') throw new Error('This test targets Windows WebView2.');
 const executable = resolve(process.argv[2] ?? '');
@@ -16,6 +17,7 @@ const project = join(directory, 'project');
 mkdirSync(project);
 writeFileSync(join(project, 'README.md'), '# Native desktop review\n\nLocal Markdown preview.\n');
 writeFileSync(join(project, 'demo.ts'), "export const greeting = 'Hello from Emdeck';\n");
+prepareProject(project, directory);
 const server = createServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
@@ -166,6 +168,7 @@ try {
     await expect(terminals).toHaveCount(5 - index);
   }
   await expect(terminals).toHaveCount(0);
+  await verifyNativeProject(page, project, directory);
   if (errors.length) throw new Error(`Native renderer errors: ${errors.join('; ')}`);
   await page
     .evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:window|close', { label: 'main' }))

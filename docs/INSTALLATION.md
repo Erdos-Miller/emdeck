@@ -1,9 +1,8 @@
 # Installing Emdeck
 
 Download builds from the project's
-[GitHub Releases](https://github.com/Erdos-Miller/emdeck/releases) page. Until a
-release is published, build from source using the README. Match the version,
-operating system and processor in the asset name.
+[GitHub Releases](https://github.com/Erdos-Miller/emdeck/releases) page. Match
+the version, operating system and processor in the asset name.
 
 | Platform            | Asset                              | Requirements                                      |
 | ------------------- | ---------------------------------- | ------------------------------------------------- |
@@ -18,10 +17,10 @@ Applications. On Ubuntu, install the downloaded `.deb` with
 filename. The first beta provides a Debian package for Ubuntu 24.04. Other Linux
 distributions are not automatically certified by a successful Ubuntu build.
 
-Release notes state whether the downloads are signed. Unsigned beta builds can
-show Windows/macOS warnings or be blocked by device policy. Do not disable
-operating-system security globally; use a signed release or follow your
-organization's approved development-build process.
+The first public beta is unsigned (ad-hoc signed, without notarization, on
+macOS). Unsigned beta builds can show Windows/macOS warnings or be blocked by
+device policy. Do not disable operating-system security globally; use a signed
+release or follow your organization's approved development-build process.
 
 ## Verify a download
 
