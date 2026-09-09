@@ -1,5 +1,10 @@
 # Windows beta measurements
 
+The final 0.1.22 idle/six-terminal measurements and the separate 45-minute GUI
+and two-hour backend soak results are in the
+[release validation record](validation/0.1.22/VALIDATION.md). The baseline below
+remains labeled with its original version.
+
 Measured on 2026-09-09 with the local optimized Emdeck 0.1.20 build. These are
 observations from one development machine, not minimum requirements or a
 comparison with another IDE.

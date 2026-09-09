@@ -18,15 +18,24 @@ native tests and 53 browser workflows, plus lint, types, formatting,
 architecture checks and Clippy. Security scans and regenerated dependency
 notices passed.
 
-The 0.1.20 and 0.1.21 tags remain unpublished candidates. The 0.1.21 two-hour
-backend soak passed, with all six shells advancing in every minute report and
-exiting cleanly. Its sampled native-process private memory remained 2.23 MiB
-over 77.84 minutes of observations. The 0.1.22 change affects launch environment
-only; terminal reading, resizing, shutdown and the renderer remain unchanged.
-The release record identifies the exact versions used for endurance measurements
-and final installed-app checks; it does not relabel older measurements as new.
+The 0.1.20 and 0.1.21 tags remain unpublished candidates. The two-hour backend
+soak began before the 0.1.21 version bump and passed with every shell advancing
+in all 119 minute reports and exiting cleanly. Its sampled native-process
+private memory remained 2.23 MiB over 77.84 minutes. A separate 45-minute 0.1.21
+GUI soak passed with six continuously progressing panes and eight layout cycles.
+The 0.1.22 change affects launch environment only; reading, resizing, shutdown
+and the renderer remain unchanged. The final backend also passed a five-minute
+six-shell soak with the corrected launch environment.
 
-Final verification, installer results and raw measurements are attached to the
+All four checks and installer jobs passed for the final release commit. Windows
+passed the installed native UI workflow and reinstall/uninstall checks; both Mac
+DMGs and the Ubuntu package passed native launch/close checks. The local 0.1.22
+binary passed the native workflow and profile compatibility from actual 0.1.19.
+A test-only follow-up waits for visibly rendered history after a wheel event
+before resizing; this avoids a WebView2 DOM/terminal event-order race.
+
+See the [completed validation record](validation/0.1.22/VALIDATION.md) for exact
+versions, measurements and limitations. Raw evidence is attached to the
 [0.1.22 release](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.22).
 
 ## 0.1.21 — Unpublished release candidate

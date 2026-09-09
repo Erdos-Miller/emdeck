@@ -43,6 +43,7 @@ export const verifyStreamingTerminals = async page => {
   await delay(2000);
   const first = page.locator('.terminal-pane').first();
   const viewport = first.locator('.xterm-viewport');
+  const beforeScroll = (await ticks())[0];
   await first.locator('.xterm-screen').hover();
   await page.mouse.wheel(0, -100000);
   const inHistory = () =>
@@ -50,6 +51,14 @@ export const verifyStreamingTerminals = async page => {
       element => element.scrollTop + element.clientHeight < element.scrollHeight - 30
     );
   await expect.poll(inHistory).toBe(true);
+  // WebView2 may update scrollTop before xterm handles the scroll event.
+  // Wait for rendered history before resizing can snapshot follow mode.
+  await expect
+    .poll(async () => {
+      const visible = (await ticks())[0];
+      return visible >= 0 && visible < beforeScroll - 10;
+    })
+    .toBe(true);
   await page.getByTitle('Side by side', { exact: true }).click();
   await page.getByTitle('Grid', { exact: true }).click();
   await delay(300);
