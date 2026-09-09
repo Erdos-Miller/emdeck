@@ -61,7 +61,7 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - name: Verify optimized GLib iterator backport
         if: runner.os == 'Linux'
-        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --release -p glib --lib variant_iter::tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --release --test glib_iterator
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
       - name: Install browser
         if: runner.os != 'Windows'

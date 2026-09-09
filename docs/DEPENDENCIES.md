@@ -24,8 +24,9 @@ requires this GLib version family, so Emdeck vendors the published crate with
 the upstream two-line iterator fix as `0.18.5+emdeck.1`. See
 [the backport record](../src-tauri/vendor/README.md). The audit verifies source
 hashes and the resolved Cargo graph because cargo-deny does not match registry
-advisories against local path packages. Linux CI exercises the existing iterator
-tests with optimization. No GLib advisory is ignored in the audit configuration.
+advisories against local path packages. Linux CI exercises a string iterator
+regression with optimization. No GLib advisory is ignored in the audit
+configuration.
 
 | Advisory                                                              | Package            | Dependency path                       |
 | --------------------------------------------------------------------- | ------------------ | ------------------------------------- |
