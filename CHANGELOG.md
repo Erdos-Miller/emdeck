@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.21 — First public beta
+## 0.1.22 — First public beta
 
 - Lightweight file editing, Markdown previews, and independent project windows.
 - Multiple terminal agents with configurable layouts and usage summaries.
@@ -19,6 +19,8 @@
   checks and unsaved editor content.
 - Terminal layout and size changes keep following live output when the pane was
   at the bottom, while preserving deliberate scrollback reading.
+- Windows terminals preserve launch-environment overrides, including tools added
+  to `PATH` by a shell or tool manager.
 
 **Unsigned beta:** Windows builds are unsigned; macOS builds use ad-hoc signing
 without notarization. Operating-system warnings or device policy may prevent
@@ -33,6 +35,13 @@ Auto-update, durable recovery of unsaved files, and agent reattachment after a
 restart are not included. Provider usage fields depend on the installed CLI and
 account. See [Validation](docs/VALIDATION.md) and the release's validation
 record for completed checks and measurement scope.
+
+## 0.1.21 — Unpublished release candidate
+
+Installed Windows validation found that the terminal library replaced inherited
+`PATH` entries with registry defaults, hiding Bun installed by the CI setup.
+Publication was held for the 0.1.22 fix; the existing candidate tag was
+preserved.
 
 ## 0.1.20 — Unpublished release candidate
 

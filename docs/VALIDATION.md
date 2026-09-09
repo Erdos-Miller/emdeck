@@ -3,7 +3,33 @@
 Versions through 0.1.3 were released as Relay; versions 0.1.4–0.1.14 were
 released as Veldri. Historical artifact names below are unchanged.
 
-## 0.1.21 — First public beta
+## 0.1.22 — First public beta
+
+The installed Windows test found that portable-pty refreshes environment values
+from the registry, replacing process overrides. Windows terminal launches now
+preserve the app's inherited values before applying terminal-specific settings.
+A native regression starts a separate test process with a tool available only
+through its `PATH`, plus a custom `TEMP`. The original implementation failed
+with `CommandNotFoundException`; the corrected implementation passes without
+changing the developer's registry or process environment.
+
+Local verification passed: 41 unit tests, 1 Bun integration test, 31 Windows
+native tests and 53 browser workflows, plus lint, types, formatting,
+architecture checks and Clippy. Security scans and regenerated dependency
+notices passed.
+
+The 0.1.20 and 0.1.21 tags remain unpublished candidates. The 0.1.21 two-hour
+backend soak passed, with all six shells advancing in every minute report and
+exiting cleanly. Its sampled native-process private memory remained 2.23 MiB
+over 77.84 minutes of observations. The 0.1.22 change affects launch environment
+only; terminal reading, resizing, shutdown and the renderer remain unchanged.
+The release record identifies the exact versions used for endurance measurements
+and final installed-app checks; it does not relabel older measurements as new.
+
+Final verification, installer results and raw measurements are attached to the
+[0.1.22 release](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.22).
+
+## 0.1.21 — Unpublished release candidate
 
 The native streaming review reproduced a resize that left two terminal views in
 old scrollback even though their buffers continued receiving output. The
@@ -22,7 +48,7 @@ native tests and 53 browser workflows, plus lint, types, formatting,
 architecture checks and Clippy. Source/history secret scans, dependency audits
 and notice regeneration passed. The native streaming review and final
 platform/installer results are recorded with the
-[0.1.21 release](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.21).
+[0.1.22 release](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.22).
 The 0.1.20 candidate was not published; its tag remains unchanged. Its native
 PTY backend and test are unchanged in 0.1.21, so the ongoing two-hour backend
 soak remains applicable. Desktop rendering is checked separately.
@@ -74,7 +100,7 @@ soak remains applicable. Desktop rendering is checked separately.
 - Workflow syntax and PowerShell parsing passed. The final tagged release reruns
   all four platform checks and installer jobs, enforces matching version/commit
   manifests, and attaches SHA-256 checksums. Review its
-  [0.1.21 release record](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.21)
+  [0.1.22 release record](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.22)
   for the final run and soak results. Earlier candidate runs found and resolved
   macOS shortcut assumptions, Linux window-manager startup timing, and elevated
   Windows WebView test configuration.
