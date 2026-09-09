@@ -90,6 +90,55 @@ async function countCalls(page: Page, command: string) {
     command
   );
 }
+
+test('streaming panes follow output through resizing and preserve manual scrollback', async ({
+  page,
+}) => {
+  const panes = page.locator('.terminal-pane');
+  const output = async (index: number, start: number, end: number) => {
+    const text = Array.from({ length: end - start }, (_, row) => `ROW ${start + row}\r\n`).join('');
+    await emit(page, `pty-${index}`, { type: 'data', data: [...new TextEncoder().encode(text)] });
+  };
+  for (let index = 0; index < 6; index++) {
+    await page.getByRole('button', { name: 'New terminal', exact: true }).click();
+    await page.getByRole('button', { name: 'Terminal Your default shell', exact: true }).click();
+    await expect(panes).toHaveCount(index + 1);
+    await output(index, 0, 200);
+    await expect(panes.nth(index).locator('.xterm-rows')).toContainText('ROW 199');
+  }
+  await page.getByTitle('Expand terminals', { exact: true }).click();
+  for (const [iteration, layout] of ['Stacked', 'Grid', 'Side by side', 'Grid'].entries()) {
+    await page.getByTitle(layout, { exact: true }).click();
+    // Let layout, FitAddon and the resulting scroll events settle before new output.
+    await page.evaluate(
+      () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    );
+    for (let index = 0; index < 6; index++) {
+      const start = 200 + iteration * 20;
+      await output(index, start, start + 20);
+      await expect(panes.nth(index).locator('.xterm-rows')).toContainText(`ROW ${start + 19}`);
+    }
+  }
+  const first = panes.first();
+  const viewport = first.locator('.xterm-viewport');
+  const inHistory = () =>
+    viewport.evaluate(el => el.scrollTop + el.clientHeight < el.scrollHeight - 30);
+  await first.locator('.xterm-screen').hover();
+  await page.mouse.wheel(0, -100000);
+  await expect.poll(inHistory).toBe(true);
+  await page.getByTitle('Stacked', { exact: true }).click();
+  await page.getByTitle('Grid', { exact: true }).click();
+  await output(0, 280, 300);
+  await expect.poll(inHistory).toBe(true);
+  await expect(first.locator('.xterm-rows')).not.toContainText('ROW 299');
+  await first.locator('.xterm-screen').hover();
+  await page.mouse.wheel(0, 100000);
+  await expect.poll(inHistory).toBe(false);
+  await output(0, 300, 320);
+  await expect(first.locator('.xterm-rows')).toContainText('ROW 319');
+  expect(await countCalls(page, 'terminal_spawn')).toBe(6);
+  expect(await countCalls(page, 'terminal_close')).toBe(0);
+});
 const usage = {
   source: 'Claude status line',
   updatedAt: 1700000000,

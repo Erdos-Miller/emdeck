@@ -3,7 +3,31 @@
 Versions through 0.1.3 were released as Relay; versions 0.1.4–0.1.14 were
 released as Veldri. Historical artifact names below are unchanged.
 
-## 0.1.20 — First public beta
+## 0.1.21 — First public beta
+
+The native streaming review reproduced a resize that left two terminal views in
+old scrollback even though their buffers continued receiving output. The
+viewport now takes its height from xterm's screen rather than resizing
+independently with the pane. Fitting restores the latest-output position after
+xterm updates its scroll area, only when the pane was already following output.
+User wheel, pointer and key interaction can cancel that pending restore.
+Deliberate history reading remains in scrollback.
+
+Four unit tests cover output arriving during resize, history reading, coalesced
+resizes and cancellation/disposal. A browser regression exercises six real xterm
+views with synthetic output, repeated layout changes, manual scrollback and
+returning to live output. The native regression uses six real PowerShell PTYs.
+Local verification passed: 41 unit tests, 1 Bun integration test, 30 Windows
+native tests and 53 browser workflows, plus lint, types, formatting,
+architecture checks and Clippy. Source/history secret scans, dependency audits
+and notice regeneration passed. The native streaming review and final
+platform/installer results are recorded with the
+[0.1.21 release](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.21).
+The 0.1.20 candidate was not published; its tag remains unchanged. Its native
+PTY backend and test are unchanged in 0.1.21, so the ongoing two-hour backend
+soak remains applicable. Desktop rendering is checked separately.
+
+## 0.1.20 — Unpublished release candidate
 
 - Apache-2.0 selected by the maintainer; public repository created under
   `Erdos-Miller/emdeck`. Added contributor, security, privacy, installation and
@@ -50,7 +74,7 @@ released as Veldri. Historical artifact names below are unchanged.
 - Workflow syntax and PowerShell parsing passed. The final tagged release reruns
   all four platform checks and installer jobs, enforces matching version/commit
   manifests, and attaches SHA-256 checksums. Review its
-  [release record](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.20)
+  [0.1.21 release record](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.21)
   for the final run and soak results. Earlier candidate runs found and resolved
   macOS shortcut assumptions, Linux window-manager startup timing, and elevated
   Windows WebView test configuration.

@@ -13,6 +13,7 @@ import type {
 } from '../../../shared/contracts/workspace';
 import { useLatest } from '../../../shared/hooks/useLatest';
 import { agentKind, agentStatus, inspectAgentScreen } from '../lib/agents';
+import { createTerminalFitter } from '../services/terminal-fit';
 interface Props {
   pane: Pane;
   root: string;
@@ -52,7 +53,7 @@ export default function TerminalPane({
   const host = useRef<HTMLDivElement>(null),
     terminal = useRef<Terminal | null>(null),
     nativeId = useRef<string | null>(null),
-    fitRef = useRef<FitAddon | null>(null);
+    fitRef = useRef<ReturnType<typeof createTerminalFitter> | null>(null);
   const [state, setState] = useState<PaneState>(native ? 'starting' : 'preview');
   const [observation, setObservation] = useState<AgentObservation | undefined>();
   const callbacks = useLatest({ onState, onError, onObservation, onUsage });
@@ -82,10 +83,18 @@ export default function TerminalPane({
       convertEol: false,
     });
     const fit = new FitAddon();
-    fitRef.current = fit;
     term.loadAddon(fit);
     term.open(host.current);
     terminal.current = term;
+    const fitter = createTerminalFitter(term, () => fit.fit(), {
+      request: callback => requestAnimationFrame(callback),
+      cancel: id => cancelAnimationFrame(id),
+    });
+    fitRef.current = fitter;
+    const element = host.current;
+    element.addEventListener('wheel', fitter.cancel, { capture: true, passive: true });
+    element.addEventListener('pointerdown', fitter.cancel, true);
+    element.addEventListener('keydown', fitter.cancel, true);
     const inspect = () => {
       if (inspectionTimer || disposed || agentKind(pane.command) === 'shell') return;
       inspectionTimer = setTimeout(() => {
@@ -118,7 +127,7 @@ export default function TerminalPane({
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (!disposed && host.current?.clientWidth && host.current?.clientHeight) {
-          fit.fit();
+          fitter.fit();
           if (nativeId.current)
             void call('terminal_resize', {
               id: nativeId.current,
@@ -146,7 +155,7 @@ export default function TerminalPane({
         return;
       }
       update('starting');
-      fit.fit();
+      fitter.fit();
       try {
         const id = await spawnTerminal(
           root,
@@ -226,6 +235,11 @@ export default function TerminalPane({
       clearTimeout(inspectionTimer);
       cancelAnimationFrame(frame);
       observer.disconnect();
+      fitter.dispose();
+      fitRef.current = null;
+      element.removeEventListener('wheel', fitter.cancel, true);
+      element.removeEventListener('pointerdown', fitter.cancel, true);
+      element.removeEventListener('keydown', fitter.cancel, true);
       input.dispose();
       term.dispose();
       terminal.current = null;
