@@ -1,0 +1,56 @@
+.statusbar {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  border-top: 1px solid var(--border);
+  font-size: 9px;
+  color: var(--muted);
+  padding: 0 13px 0 0;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.status-brand {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 1px;
+  color: var(--accent-ink);
+  padding: 0 14px;
+  border-right: 1px solid var(--border);
+}
+
+.statusbar > button {
+  font-size: 9px;
+  gap: 5px;
+  color: var(--subtle);
+  height: 100%;
+  padding: 0;
+}
+
+.statusbar > button:hover {
+  color: var(--accent-ink);
+}
+
+.status-idle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-idle i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.status-divider {
+  height: 11px;
+  width: 1px;
+  background: var(--border);
+}

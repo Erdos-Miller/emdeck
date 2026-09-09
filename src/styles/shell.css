@@ -1,0 +1,295 @@
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 53px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 15px 0 17px;
+  gap: 6px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 20;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: 17px;
+  user-select: none;
+}
+
+.brand img {
+  width: 24px;
+  height: 24px;
+}
+
+.brand > span {
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--strong);
+  letter-spacing: -1px;
+}
+
+.brand-period {
+  color: var(--accent-ink);
+}
+
+.topbar-divider {
+  height: 18px;
+  width: 1px;
+  background: var(--border);
+  margin: 0 9px;
+}
+
+.project-switch {
+  height: 30px;
+  color: var(--strong);
+  font-size: 12px;
+  gap: 9px;
+  padding: 0 8px;
+  border-radius: 4px;
+  max-width: 200px;
+}
+
+.project-menu-wrapper {
+  position: relative;
+}
+
+.project-popover {
+  position: absolute;
+  top: 37px;
+  left: 0;
+  width: 290px;
+}
+
+.recent-project-menu-item .truncate {
+  flex: 1;
+}
+
+.project-switch span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-switch > svg:first-child {
+  color: var(--subtle);
+}
+
+.project-switch:hover {
+  background: var(--elevated);
+}
+
+.branch-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.branch-button {
+  font-size: 11px;
+  gap: 7px;
+  color: var(--subtle);
+  height: 29px;
+  border: 1px solid var(--border);
+  padding: 0 9px;
+  border-radius: 5px;
+  max-width: 190px;
+}
+
+.branch-button span {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-button:hover,
+.branch-button.active {
+  background: var(--elevated);
+}
+
+.branch-button > svg:first-child {
+  color: var(--accent-ink);
+}
+
+.quick-search {
+  width: 245px;
+  height: 28px;
+  justify-content: flex-start;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 10px;
+  padding: 0 8px;
+}
+
+.quick-search kbd {
+  margin-left: auto;
+  font-size: 9px;
+  line-height: 15px;
+}
+
+.run-controls {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  height: 29px;
+  overflow: hidden;
+}
+
+.run-config {
+  font-size: 11px;
+  gap: 8px;
+  max-width: 175px;
+  padding: 0 9px;
+  height: 100%;
+}
+
+.run-config span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: #d6b27c;
+}
+
+.run-button {
+  height: 100%;
+  color: var(--accent-ink);
+  padding: 0 9px;
+  border-left: 1px solid var(--border);
+}
+
+.run-button:hover {
+  background: var(--hover);
+}
+
+.preview-banner {
+  height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.preview-label {
+  letter-spacing: 1px;
+  font-weight: 600;
+  font-size: 8px;
+  color: var(--accent-ink);
+}
+
+.preview-banner button {
+  font-size: 10px;
+  color: var(--subtle);
+}
+
+.preview-banner button:hover {
+  color: var(--accent-ink);
+}
+
+.workspace {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 51px;
+  flex-shrink: 0;
+  padding: 12px 0 9px;
+  gap: 10px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.activity-bar > button {
+  height: 36px;
+  width: 100%;
+  color: var(--muted);
+  position: relative;
+}
+
+.activity-bar > button:hover {
+  color: var(--text);
+}
+
+.activity-bar > button.selected {
+  color: var(--accent-ink);
+}
+
+.activity-bar > button.selected:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  height: 21px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+
+.activity-bar > button.selected:after {
+  content: "";
+  position: absolute;
+  inset: 0 7px;
+  background: var(--accent);
+  opacity: 0.055;
+  border-radius: 5px;
+}
+
+.activity-badge {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 10px;
+  padding: 0 4px;
+  font-size: 8px;
+}
+
+.activity-separator {
+  width: 19px;
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
+}
+
+.avatar {
+  width: 25px;
+  height: 25px;
+  border: 1px solid var(--border);
+  background: var(--elevated);
+  color: var(--subtle);
+  border-radius: 7px;
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  margin-top: 3px;
+}
+
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}

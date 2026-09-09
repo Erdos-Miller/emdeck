@@ -1,0 +1,11 @@
+node_modules
+dist
+src-tauri/target
+src-tauri/gen
+test-results
+.tmp
+/release
+playwright-report
+bun.lock
+# Generated dependency notices preserve upstream license text verbatim.
+docs/licenses/

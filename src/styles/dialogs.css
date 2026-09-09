@@ -1,0 +1,82 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #0007;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: 470px;
+  max-width: 95vw;
+  max-height: 88vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 23px;
+  color: var(--text);
+  animation: modal-in 0.12s ease-out;
+}
+
+.modal.wide {
+  width: 650px;
+}
+
+.modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 17px;
+}
+
+.modal h2 {
+  font-size: 17px;
+  color: var(--strong);
+  font-weight: 550;
+  letter-spacing: -0.3px;
+}
+
+.dialog-description {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 0 0 19px;
+  white-space: pre-wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--subtle);
+  margin: 16px 0;
+}
+
+.field input {
+  width: 100%;
+  font-size: 12px;
+}
+
+.field small {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  border-top: 1px solid var(--border);
+  padding-top: 17px;
+  margin-top: 23px;
+}

@@ -1,0 +1,54 @@
+.help-launch {
+  padding: 16px;
+  display: flex;
+  gap: 13px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+.help-launch > svg {
+  color: var(--accent-ink);
+}
+
+.help-launch strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.help-launch code {
+  display: block;
+  color: var(--accent-ink);
+  font-size: 11px;
+  margin-top: 10px;
+  line-height: 1.9;
+}
+
+.help-launch small {
+  display: block;
+  color: var(--muted);
+  margin-top: 9px;
+  font-size: 10px;
+}
+
+.shortcut-list {
+  padding: 15px 0;
+}
+
+.shortcut-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  height: 28px;
+  color: var(--subtle);
+}
+
+.help-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+}

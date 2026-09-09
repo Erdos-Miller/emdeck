@@ -1,0 +1,22 @@
+/* Keep import order stable: themes, shared primitives, features, then responsive overrides. */
+@import "./styles/foundation.css";
+@import "./styles/shell.css";
+@import "./styles/explorer.css";
+@import "./styles/layout.css";
+@import "./styles/editor.css";
+@import "./styles/welcome.css";
+@import "./styles/terminal-panel.css";
+@import "./styles/agents.css";
+@import "./styles/terminal-panes.css";
+@import "./styles/statusbar.css";
+@import "./styles/menus.css";
+@import "./styles/dialogs.css";
+@import "./styles/settings.css";
+@import "./styles/palette.css";
+@import "./styles/runs.css";
+@import "./styles/help.css";
+@import "./styles/notifications.css";
+@import "./styles/source-control.css";
+@import "./styles/worktrees.css";
+@import "./styles/diffs.css";
+@import "./styles/responsive.css";

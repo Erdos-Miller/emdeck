@@ -1,0 +1,100 @@
+.sidebar-resizer {
+  grid-area: sidebar-divider;
+  width: 3px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  cursor: col-resize;
+  position: relative;
+  z-index: 8;
+}
+
+.sidebar-resizer:hover {
+  background: var(--accent);
+}
+
+.sidebar-resizer:focus-visible,
+.terminal-resizer:focus-visible {
+  background: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.resizing {
+  user-select: none;
+}
+
+.resizing iframe {
+  pointer-events: none;
+}
+
+.main-workspace {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 3px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 3px clamp(180px, var(--terminal-height), calc(100% - 160px));
+  grid-template-areas:
+    "sidebar sidebar-divider editor"
+    "terminal-divider terminal-divider terminal-divider"
+    "terminals terminals terminals";
+  overflow: hidden;
+}
+
+.main-workspace.terminal-placement-editor {
+  grid-template-areas:
+    "sidebar sidebar-divider editor"
+    "sidebar sidebar-divider terminal-divider"
+    "sidebar sidebar-divider terminals";
+}
+
+.main-workspace.sidebar-hidden,
+.main-workspace.terminal-placement-workspace.terminals-expanded {
+  grid-template-columns: 0 0 minmax(0, 1fr);
+}
+
+.main-workspace.terminals-hidden {
+  grid-template-rows: minmax(0, 1fr) 0 0;
+}
+
+.main-workspace.terminals-expanded {
+  grid-template-rows: 0 0 minmax(0, 1fr);
+}
+
+.terminal-placement-workspace.terminals-expanded > .sidebar,
+.terminal-placement-workspace.terminals-expanded > .sidebar-resizer {
+  display: none;
+}
+
+.editor-panel {
+  grid-area: editor;
+  min-width: 0;
+  flex: 1;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor);
+  overflow: hidden;
+}
+
+.editor-panel.hidden-panel {
+  display: none;
+}
+
+.file-document,
+.diff-document,
+.worktrees-document {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.file-document[hidden],
+.diff-document[hidden],
+.worktrees-document[hidden] {
+  display: none;
+}

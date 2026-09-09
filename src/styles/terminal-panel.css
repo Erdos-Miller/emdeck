@@ -1,0 +1,166 @@
+.terminal-resizer {
+  grid-area: terminal-divider;
+  height: 3px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  cursor: row-resize;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.terminal-resizer:hover {
+  background: var(--accent);
+}
+
+.terminal-panel {
+  grid-area: terminals;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+  flex-shrink: 0;
+  background: var(--bg);
+  container-type: inline-size;
+  container-name: terminal-panel;
+}
+
+.terminal-panel.full {
+  flex: 1;
+  min-height: 0;
+}
+
+.terminal-toolbar {
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 16px;
+  gap: 7px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  position: relative;
+  z-index: 12;
+  min-width: 0;
+}
+
+.terminal-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+}
+
+.terminal-heading > svg {
+  color: var(--accent-ink);
+  stroke-width: 1.6;
+}
+
+.terminal-heading strong {
+  font-size: 9px;
+  letter-spacing: 1.1px;
+  font-weight: 600;
+}
+
+.count-badge {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 8px;
+  line-height: 15px;
+  padding: 0 5px;
+  border-radius: 4px;
+  color: var(--muted);
+}
+
+.terminal-subtitle {
+  margin-left: 14px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+@container terminal-panel (max-width: 650px) {
+  .terminal-subtitle {
+    display: none;
+  }
+  .terminal-toolbar {
+    padding: 0 7px;
+    gap: 4px;
+  }
+  .terminal-heading {
+    gap: 5px;
+  }
+  .terminal-toolbar .toolbar-separator {
+    margin: 0 2px;
+  }
+}
+
+@container terminal-panel (max-width: 480px) {
+  .terminal-heading strong {
+    display: none;
+  }
+  .terminal-toolbar .add-terminal {
+    font-size: 0;
+    gap: 3px;
+    padding: 5px;
+  }
+}
+
+.layout-controls {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.layout-controls .icon-button {
+  height: 21px;
+  width: 24px;
+}
+
+.toolbar-separator {
+  height: 15px;
+  width: 1px;
+  background: var(--border);
+  margin: 0 5px;
+}
+
+.add-terminal {
+  font-size: 10px;
+  color: var(--text);
+  padding: 5px 8px;
+  gap: 6px;
+  border-radius: 4px;
+}
+
+.add-terminal:hover {
+  background: var(--hover);
+}
+
+.add-terminal > svg:first-child {
+  color: var(--accent-ink);
+}
+
+.agent-menu-wrapper {
+  position: relative;
+}
+
+.terminal-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  background: var(--bg);
+  overflow: auto;
+  min-width: 0;
+}
+
+.terminal-workspace {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  min-width: 0;
+}

@@ -1,0 +1,163 @@
+.git-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.git-current {
+  margin: 4px 13px 10px;
+  padding: 10px;
+  width: calc(100% - 26px);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+  justify-content: flex-start;
+  gap: 9px;
+}
+
+.git-current svg {
+  color: var(--accent-ink);
+}
+
+.git-current strong {
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-current span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.commit-form {
+  padding: 0 13px 15px;
+}
+
+.commit-form textarea {
+  width: 100%;
+  font-size: 11px;
+  min-height: 70px;
+}
+
+.commit-form .button {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 10px;
+  padding: 7px;
+}
+
+.git-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 17px 8px;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  color: var(--subtle);
+  border-top: 1px solid var(--border);
+}
+
+.git-group-title span {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.change-row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 8px 0 12px;
+  height: 29px;
+}
+
+.change-row:hover {
+  background: var(--elevated);
+}
+
+.change-file {
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-start;
+  gap: 7px;
+  font-size: 11px;
+}
+
+.change-row > .icon-button {
+  width: 21px;
+}
+
+.empty-caption {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 10px 17px 17px;
+  line-height: 1.7;
+}
+
+.history-title {
+  margin-top: 16px;
+}
+
+.commit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 18px;
+}
+
+.commit-item > svg {
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.commit-item > div {
+  min-width: 0;
+}
+
+.commit-item strong {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.commit-item small {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.commit-item code {
+  font-size: 8px;
+}
+
+.git-worktrees {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.git-worktrees span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.git-worktrees:hover {
+  border-color: var(--accent);
+}

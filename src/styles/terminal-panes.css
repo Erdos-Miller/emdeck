@@ -1,0 +1,201 @@
+.layout-columns {
+  grid-template-columns: repeat(var(--pane-count), minmax(210px, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.layout-rows {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(var(--pane-count), minmax(155px, 1fr));
+}
+
+.layout-grid {
+  grid-template-columns: repeat(2, minmax(210px, 1fr));
+  grid-auto-rows: minmax(160px, 1fr);
+}
+
+.terminal-grid.has-maximized {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.pane-container {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.pane-container.pane-hidden {
+  display: none;
+}
+
+.terminal-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #111418;
+  box-shadow: 0 2px 4px #0001;
+}
+
+.terminal-pane:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 31px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 8px 0 11px;
+}
+
+.pane-icon {
+  display: flex;
+}
+
+.pane-header strong {
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.pane-header .icon-button {
+  width: 18px;
+  height: 21px;
+  color: var(--muted);
+}
+
+.pane-state {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.pane-state i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.pane-state.running i,
+.pane-state.output i {
+  background: var(--accent);
+}
+
+.pane-state.output {
+  color: var(--accent-ink);
+}
+
+.pane-state.error {
+  color: var(--danger);
+}
+
+.pane-state.error i {
+  background: var(--danger);
+}
+
+.terminal-host {
+  /* FitAddon reads this element's computed size as usable terminal space. */
+  box-sizing: content-box;
+  padding: 10px 9px 8px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-host .xterm {
+  height: 100%;
+}
+
+/* Keep the scrollbar gutter stable so hovering never resizes a session. */
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.terminal-pane:hover .xterm-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 28%, transparent);
+}
+
+.terminal-pane:hover .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .terminal-pane .xterm-viewport {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .terminal-pane:hover .xterm-viewport {
+    scrollbar-color: color-mix(in srgb, var(--muted) 28%, transparent) transparent;
+  }
+}
+
+.pane-footer {
+  height: 23px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 11px;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--muted);
+  gap: 15px;
+  background: var(--panel);
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.pane-footer span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-empty {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 120px;
+}
+
+.terminal-empty-icon {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.terminal-empty h3 {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.terminal-empty p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+
+.terminal-empty .button {
+  margin-left: 14px;
+  font-size: 11px;
+}

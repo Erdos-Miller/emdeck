@@ -1,0 +1,248 @@
+.sidebar {
+  grid-area: sidebar;
+  min-height: 0;
+  flex-shrink: 0;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sidebar-heading {
+  height: 42px;
+  padding: 0 14px 0 19px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: var(--subtle);
+}
+
+.sidebar-heading .icon-button {
+  width: 23px;
+}
+
+.project-tree-heading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 33px;
+  padding: 0 9px 0 14px;
+  font-size: 11px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.project-tree-heading strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-tree-heading .icon-button {
+  width: 20px;
+  height: 22px;
+}
+
+.file-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 0 15px;
+}
+
+/* Hide only the thumb so hovering does not shift file names or change scrolling. */
+
+.file-tree::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.sidebar:hover .file-tree::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 28%, transparent);
+}
+
+.sidebar:hover .file-tree::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .file-tree {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .sidebar:hover .file-tree {
+    scrollbar-color: color-mix(in srgb, var(--muted) 28%, transparent) transparent;
+  }
+}
+
+.tree-row {
+  height: 29px;
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  gap: 7px;
+  padding-right: 15px;
+  font-size: 11px;
+  color: var(--subtle);
+  position: relative;
+}
+
+.tree-row:hover {
+  background: var(--elevated);
+  color: var(--strong);
+}
+
+.tree-row.selected {
+  color: var(--strong);
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+
+.tree-row.selected:after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.tree-chevron {
+  width: 10px;
+  flex-shrink: 0;
+  display: flex;
+  color: var(--muted);
+}
+
+.folder-icon {
+  color: #8f9eb0;
+  stroke-width: 1.6;
+}
+
+.file-icon {
+  width: 16px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: #98a9bb;
+  font-weight: 600;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 18px;
+}
+
+.file-ts,
+.file-tsx {
+  color: #72a6cc;
+  font-size: 8px;
+}
+
+.file-js,
+.file-jsx {
+  color: #d6bf7f;
+  font-size: 8px;
+}
+
+.file-css {
+  color: #ac95d5;
+  font-size: 15px;
+}
+
+.file-json {
+  color: #cfb578;
+  font-size: 12px;
+}
+
+.file-md {
+  color: #8da3b5;
+  font-size: 10px;
+}
+
+.file-rs {
+  color: #d5a990;
+}
+
+.git-letter {
+  font-family: var(--mono);
+  font-size: 10px;
+  margin-left: auto;
+  color: #b3bf88;
+}
+
+.git-letter.conflict {
+  color: var(--danger);
+}
+
+.tree-empty {
+  font-size: 10px;
+  color: var(--muted);
+  height: 25px;
+  display: flex;
+  align-items: center;
+}
+
+.tree-filter {
+  padding: 5px 12px 10px;
+}
+
+.tree-filter input {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px 8px;
+}
+
+.tree-filter small {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.explorer-bottom {
+  height: 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--muted);
+  padding: 0 13px;
+  flex-shrink: 0;
+}
+
+.tiny-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.explorer-bottom > span:last-child {
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.sidebar-empty {
+  padding: 32px 22px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.sidebar-empty h3 {
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 16px;
+  font-weight: 550;
+}
+
+.sidebar-empty p {
+  margin: 8px 0 15px;
+  overflow-wrap: anywhere;
+}
