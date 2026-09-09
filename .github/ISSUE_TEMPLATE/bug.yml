@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible problem in Emdeck.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets, private source, or agent transcripts. Report security issues using the Security tab.
+  - type: input
+    id: version
+    attributes:
+      label: Emdeck version
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and processor
+      placeholder: Windows 11 x64, macOS Apple Silicon, Ubuntu 24.04 x64…
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Use a small public or synthetic project.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

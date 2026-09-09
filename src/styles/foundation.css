@@ -1,0 +1,252 @@
+:root {
+  --sans: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --bg: #121418;
+  --panel: #15181d;
+  --editor: #171a1f;
+  --elevated: #20242b;
+  --hover: #242932;
+  --line: #1d2128;
+  --border: #292d35;
+  --text: #cdd2da;
+  --strong: #eef0f4;
+  --muted: #78828f;
+  --subtle: #a0a8b4;
+  --accent: #b8ee86;
+  --selection: #304330;
+  --danger: #ef9999;
+  --shadow: 0 16px 60px #0007;
+  font-family: var(--sans);
+  color: var(--text);
+  background: var(--bg);
+  font-size: 12px;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="light"] {
+  --bg: #f0f2f5;
+  --panel: #f5f6f8;
+  --editor: #fff;
+  --elevated: #e9edf2;
+  --hover: #e2e7ef;
+  --line: #f6f8fb;
+  --border: #dce1e8;
+  --text: #424b59;
+  --strong: #202833;
+  --muted: #808997;
+  --subtle: #636f7f;
+  --selection: #d6e9c9;
+  --danger: #bc3948;
+  --shadow: 0 16px 60px #27354d25;
+  color-scheme: light;
+}
+
+:root[data-theme="graphite"] {
+  --bg: #1b1b1c;
+  --panel: #212122;
+  --editor: #242425;
+  --elevated: #2e2e30;
+  --hover: #373739;
+  --line: #2a2a2c;
+  --border: #39393c;
+  --text: #d4d3d1;
+  --strong: #f4f3f0;
+  --muted: #838382;
+  --subtle: #a8a7a3;
+  --selection: #3b4436;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+input,
+textarea,
+select {
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 9px 11px;
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent-ink);
+  width: 15px;
+  height: 15px;
+}
+
+input[type="number"] {
+  width: 70px;
+}
+
+input[type="color"] {
+  width: 26px;
+  height: 26px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+textarea {
+  resize: vertical;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent-ink);
+}
+
+svg {
+  flex-shrink: 0;
+}
+
+kbd {
+  font-family: var(--sans);
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  line-height: 17px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+
+code {
+  font-family: var(--mono);
+}
+
+.spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon-button {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--strong);
+}
+
+.icon-button.selected {
+  color: var(--accent-ink);
+  background: var(--hover);
+}
+
+.button {
+  padding: 9px 14px;
+  min-height: 34px;
+  font-size: 12px;
+  font-weight: 550;
+  border-radius: 5px;
+  gap: 8px;
+  border: 1px solid transparent;
+}
+
+.button.primary {
+  background: var(--accent);
+  color: #1e2a17;
+}
+
+.button.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.button.secondary {
+  border-color: var(--border);
+  background: var(--elevated);
+  color: var(--text);
+}
+
+.button.secondary:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.button.danger {
+  background: #ad4141;
+  color: #fff;
+}
+
+.button kbd {
+  margin-left: 14px;
+  color: inherit;
+  border-color: #23432340;
+}
+
+.danger-text {
+  color: var(--danger) !important;
+}
+
+.loading {
+  padding: 25px;
+  color: var(--muted);
+}

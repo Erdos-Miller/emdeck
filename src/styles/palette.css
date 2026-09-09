@@ -1,0 +1,54 @@
+.palette-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+.palette-search input {
+  border: 0;
+  padding: 5px 0;
+  background: transparent;
+  flex: 1;
+  width: 100%;
+}
+
+.palette-results {
+  max-height: 340px;
+  overflow: auto;
+  padding-top: 8px;
+}
+
+.palette-results button {
+  width: 100%;
+  display: flex;
+  text-align: left;
+  justify-content: flex-start;
+  padding: 10px 7px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.palette-results button:hover {
+  background: var(--hover);
+}
+
+.palette-results button > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-results button > svg:first-child {
+  color: var(--muted);
+}
+
+.palette-footnote {
+  font-size: 10px;
+  color: var(--muted);
+  padding-top: 12px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
