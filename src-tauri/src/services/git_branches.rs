@@ -59,7 +59,9 @@ pub fn branches(root: &Path) -> Result<Vec<Branch>> {
     let fields: Vec<_> = refs.split('\0').collect();
     // Only the separator before each ref contains Git's record newline; paths may contain newlines.
     Ok(fields
-        .chunks_exact(7)
+        .as_chunks::<7>()
+        .0
+        .iter()
         .filter_map(|fields| {
             if !fields[1].is_empty() {
                 return None;

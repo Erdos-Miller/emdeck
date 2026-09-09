@@ -8,8 +8,10 @@ remain applicable independently of Emdeck's own license.
 
 These files are generated from the locked dependency graph and included with
 installers. They include upstream license text and source-package references.
-Emdeck does not modify the vendored packages. Where multiple licenses are
-offered, the recorded license selection applies to this distribution.
+Emdeck carries a GLib iterator safety backport, documented with original source
+provenance in [src-tauri/vendor/README.md](src-tauri/vendor/README.md). Other
+dependency packages remain unmodified. Where multiple licenses are offered, the
+recorded license selection applies to this distribution.
 
 System components such as WebView2, WebKitGTK, operating-system libraries, Git,
 and independently installed agent CLIs have their own licenses. Emdeck does not

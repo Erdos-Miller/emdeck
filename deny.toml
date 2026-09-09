@@ -7,7 +7,8 @@ targets = [
 ]
 
 [advisories]
-# Reviewed upstream maintenance notices; no vulnerability advisories are waived.
+unsound = "all"
+# Reviewed upstream maintenance notices; the GLib backport is checked separately.
 # Revisit with each Tauri update. Details: docs/DEPENDENCIES.md.
 ignore = [
   { id = "RUSTSEC-2024-0370", reason = "Linux GTK3 build macro via Tauri; upstream maintenance notice, no compatible replacement in this graph." },

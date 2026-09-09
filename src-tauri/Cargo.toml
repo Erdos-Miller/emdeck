@@ -26,6 +26,10 @@ tempfile = "3"
 trash = "5"
 base64 = "0.22"
 
+[patch.crates-io]
+# Backport gtk-rs#1343 while Tauri's GTK3 stack requires GLib 0.18.
+glib = { path = "vendor/glib" }
+
 [profile.release]
 codegen-units = 1
 lto = true

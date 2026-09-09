@@ -9,3 +9,5 @@ playwright-report
 bun.lock
 # Generated dependency notices preserve upstream license text verbatim.
 docs/licenses/
+# Vendored upstream Rust package, reviewed by its own source manifest.
+src-tauri/vendor/

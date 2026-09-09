@@ -4047,6 +4047,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Used by:
 
+- glib 0.18.5+emdeck.1 — https://github.com/Erdos-Miller/emdeck/tree/main/src-tauri/vendor/glib
 - atk-sys 0.18.2 — https://crates.io/crates/atk-sys/0.18.2
 - atk 0.18.2 — https://crates.io/crates/atk/0.18.2
 - cairo-rs 0.18.5 — https://crates.io/crates/cairo-rs/0.18.5
@@ -4062,7 +4063,6 @@ Used by:
 - gio 0.18.4 — https://crates.io/crates/gio/0.18.4
 - glib-macros 0.18.5 — https://crates.io/crates/glib-macros/0.18.5
 - glib-sys 0.18.1 — https://crates.io/crates/glib-sys/0.18.1
-- glib 0.18.5 — https://crates.io/crates/glib/0.18.5
 - gobject-sys 0.18.0 — https://crates.io/crates/gobject-sys/0.18.0
 - gtk-sys 0.18.2 — https://crates.io/crates/gtk-sys/0.18.2
 - gtk3-macros 0.18.2 — https://crates.io/crates/gtk3-macros/0.18.2

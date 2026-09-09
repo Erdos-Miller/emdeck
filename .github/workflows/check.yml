@@ -1,6 +1,7 @@
 name: Check Emdeck
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -58,6 +59,9 @@ jobs:
       - run: bun run test:integration
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Verify optimized GLib iterator backport
+        if: runner.os == 'Linux'
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --release -p glib --lib variant_iter::tests
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
       - name: Install browser
         if: runner.os != 'Windows'
