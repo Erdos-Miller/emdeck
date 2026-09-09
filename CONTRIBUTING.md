@@ -15,8 +15,8 @@ bun run desktop
 
 `bun run dev` runs the browser demo using sample files and simulated agents.
 Read [AGENTS.md](AGENTS.md) and [Architecture](docs/ARCHITECTURE.md) before
-changing ownership or lifecycle behavior. The private EM monorepo is not needed
-to build or contribute to this repository.
+changing ownership or lifecycle behavior. All requirements for building and
+contributing are documented in this repository.
 
 ## Pull requests
 

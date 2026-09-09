@@ -8,6 +8,7 @@ import type {
 } from '../../../shared/contracts/workspace';
 import { agentKind, agentStatus, metricNumber } from '../lib/agents';
 import { WindowUsage } from './WindowUsage';
+import { remoteStatus } from '../services/connections';
 interface Props {
   pane: Pane;
   state?: PaneState;
@@ -52,10 +53,10 @@ export default function AgentCard({
       <button className='agent-card-title' onClick={handleFocusClick} title={`Focus ${pane.name}`}>
         <i style={{ background: pane.color }} />
         <strong>{pane.name}</strong>
-        <small>{kind === 'custom' ? 'command' : kind}</small>
+        <small>{pane.remote?.target.backend ?? (kind === 'custom' ? 'command' : kind)}</small>
       </button>
       <p className='agent-cwd' title={pane.cwd || 'Project root'}>
-        {pane.cwd ? `./${pane.cwd}` : 'Project root'}
+        {pane.remote?.target.host ?? (pane.cwd ? `./${pane.cwd}` : 'Project root')}
       </p>
       {preferences.metrics.map(metric => {
         if (metric === 'activity')
@@ -66,7 +67,7 @@ export default function AgentCard({
               title='Detected labels are observations of the terminal UI, not authoritative lifecycle events.'
             >
               <i />
-              {status.label}
+              {pane.remote ? remoteStatus(state) : status.label}
             </div>
           );
         if (metric === 'elapsed')

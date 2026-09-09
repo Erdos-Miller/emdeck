@@ -1,8 +1,8 @@
 # Emdeck contributor instructions
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing module
-ownership. This standalone product adopts the applicable Erdos Miller monorepo
-standards; the reference repository is not a runtime or build dependency.
+ownership. This standalone product follows the Erdos Miller engineering
+standards documented here and has no private repository dependencies.
 
 - Use Node 22 and Bun 1.3.6. Commit `bun.lock`; do not create another JS
   lockfile.

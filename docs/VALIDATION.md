@@ -3,6 +3,110 @@
 Versions through 0.1.3 were released as Relay; versions 0.1.4–0.1.14 were
 released as Veldri. Historical artifact names below are unchanged.
 
+## Unreleased — public source review
+
+Reviewed on 2026-09-09 before publishing the session-server changes:
+
+- Gitleaks 8.30.1 scanned the 391-file publication inventory and all 16 fetched
+  commits with no detected secrets. Both scans used the default rules without
+  path exclusions, ignore-file suppressions or inline allow comments.
+- Reviewed non-vendored source and documentation for internal endpoints,
+  personal paths, private project references and credential material. The public
+  workspace screenshot contains synthetic demo content. No environment files,
+  signing keys, local agent state, transcripts or build outputs are in the
+  publication inventory.
+- Removed internal project names and directory references from current
+  documentation. Existing public history retains earlier documentation; this
+  review does not rewrite commits or tags.
+- GitHub secret scanning, push protection and private vulnerability reporting
+  are enabled. GitHub reported no open secret or dependency alerts; the local
+  JavaScript vulnerability audit also passed.
+- Added isolated integration coverage for force-tracked ignored files and
+  refusal to follow a tracked directory replaced with a filesystem link.
+
+Automated scanning cannot establish that every possible form of confidential
+business information is absent. This review covers source publication; it does
+not approve new binary releases or arbitrary user-created project data.
+
+## Unreleased — Emdeck session server
+
+Windows x64 validation on 2026-09-09; not included in the published 0.1.22 beta.
+
+- `bun run verify` passed with 49 unit tests, 1 integration test and 60 browser
+  workflows. A final native follow-up passed 36 desktop tests plus 11 headless
+  runtime tests. The three existing provider/soak tests remain opt-in.
+- Rust formatting and workspace Clippy passed with warnings denied. The runtime
+  is included in architecture/size checks and the cross-platform CI test/build
+  matrix. Updated Rust license notices and advisory/source/license checks pass.
+- Real temporary processes verify detached progress, input, replay, ownership,
+  protocol authentication, concurrent CLI requests, generation-pinned waits,
+  cold layout restoration without command replay, and bounded-output recovery.
+  VT tests verify device-query replies and alternate-screen restoration without
+  a renderer. Hook fixtures check state authority and child-agent isolation.
+- The native Windows application test closes and relaunches Emdeck while its
+  counter process continues in the same server/generation, reconnects to the
+  screen, detaches without stopping, then explicitly stops the process. The
+  fixture uses private temporary server and WebView profiles and no real agents
+  or user projects. Repeat with `scripts/release/windows-sessions.mjs`, passing
+  the IDE and standalone session executable paths. The final optimized Windows
+  build and standalone binary passed this workflow again, including opening the
+  IDE executable for writing while its background server kept running. Local
+  evidence is in `.tmp/session-desktop-DnsRKF`, with build/acceptance logs in
+  `.tmp/session-final-build.log` and `.tmp/session-final-acceptance.log`.
+- Browser coverage verifies optional activation, existing unattached agents,
+  ordered input, mounted-terminal preservation, and separate detach/stop flows.
+  Initial regression failures from eagerly mounted hidden forms were corrected
+  by loading the optional view on selection and using distinct field labels.
+- Pinned React Doctor review retains four known Worktrees false positives and 61
+  advisory warnings; see `REACT-AUDIT.md`. No diagnostic suppression or size
+  baseline increase was introduced.
+
+Authenticated SSH hosts, macOS/Linux native execution and real provider resume
+remain unverified locally. SSH argument security and the multiplexed bridge
+protocol have fixture coverage. Remote quota/cost/token aggregation and OS login
+service installation are not implemented. Current-screen replay is bounded and
+does not restore an unlimited transcript. See `PERSISTENT-AGENTS.md` for the
+exact capabilities and setup requirements.
+
+## Unreleased — terminal workspaces and remote connections
+
+Validated locally on Windows x64 on 2026-09-09. This feature is not included in
+the published 0.1.22 beta.
+
+- `bun run verify` passed: 47 unit tests, 1 Bun integration test, 35 native
+  tests and 59 browser workflows, with lint, types, formatting, architecture and
+  size checks. Three existing native provider/soak tests remain opt-in. Rust
+  formatting and Clippy with warnings treated as errors passed.
+- New tests cover connection recovery/validation, working-directory grouping,
+  exact tmux session selection, SSH argument boundaries, executable resolution
+  outside the opened project, and preserved terminal/editor state while changing
+  views. Browser workflows cover explicit attach, input/output, failed launch,
+  reconnect, disconnect isolation, and browser-session URL dispatch. A newly
+  launched terminal is revealed even when another space was selected, and the
+  overview button returns to the customizable agent metrics without restarting
+  terminals.
+- The native Windows workflow passed with real PowerShell and OpenSSH processes.
+  A loopback peer closes before authentication to exercise SSH failure, retry,
+  and disconnect while an ordinary local PTY remains usable. It also rechecks
+  six streaming terminals, layout/scrollback, files, Markdown, Git worktrees,
+  project windows, a detected Bun command and graceful application close. The
+  final Windows x64 executable and NSIS installer built successfully. One
+  scrollback assertion failed during an overlapping native/test run; the final
+  isolated desktop workflow passed. Build and desktop validation are run
+  sequentially to avoid shared assets and test-process contention.
+- An initial browser run overlapped a desktop asset rebuild and encountered a
+  missing lazy-loaded worktree chunk. Serializing asset builds resolved the
+  fixture failure; all 59 workflows then passed. A narrow-toolbar layout issue
+  found during regression testing was fixed by allowing its controls to wrap.
+- React Doctor retains four reviewed false positives and 58 advisory warnings;
+  see [React audit](REACT-AUDIT.md). No dependencies were added. Release
+  metadata and workflow configuration checks passed.
+- Authenticated remote cmux/tmux sessions, provider login, and native
+  macOS/Linux behavior have not been exercised for this feature. Browser links
+  are explicit handoffs, not native provider-control integrations. Remote
+  per-agent usage is not aggregated into local cards. See
+  [Remote sessions](REMOTE-SESSIONS.md).
+
 ## 0.1.22 — First public beta
 
 The installed Windows test found that portable-pty refreshes environment values
@@ -120,10 +224,9 @@ soak remains applicable. Desktop rendering is checked separately.
 
 ## 0.1.19 — Architecture and EM repository conventions
 
-- Reviewed the EM monorepo's root instructions, reusable standards, ToolHub
-  domain boundaries, ToolConnect native conventions, formatting and size policy.
-  Applied the relevant rules to this standalone desktop product. The reference
-  repository was not changed; see [Architecture](ARCHITECTURE.md).
+- Applied engineering standards for domain boundaries, native conventions,
+  formatting and file-size limits to this standalone desktop product; see
+  [Architecture](ARCHITECTURE.md).
 - Split the application into feature modules, workspace controllers and views,
   shared contracts, platform adapters and ordered styles. `App.tsx` is now 213
   lines (previously 2,323); the style entry is 22 lines (previously 3,504).

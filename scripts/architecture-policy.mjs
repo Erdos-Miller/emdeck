@@ -1,5 +1,12 @@
-/** Adapted from EM scripts/code-size-ratchet/policy.json; no legacy exemptions. */
-export const sourceRoots = ['src', 'src-tauri/src', 'tests', 'scripts'];
+/** Emdeck code-size and dependency policy; no legacy exemptions. */
+export const sourceRoots = [
+  'src',
+  'src-tauri/src',
+  'src-tauri/runtime/src',
+  'src-tauri/runtime/tests',
+  'tests',
+  'scripts',
+];
 export const budgets = {
   component: { warn: 250, max: 500 },
   service: { warn: 400, max: 700 },

@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+- Publication scans cover every tracked file and publishable new source file,
+  plus all fetched Git history, without path exclusions or inline suppressions.
+  Local credential/configuration folders are ignored, and documentation omits
+  internal project names and directory structures.
+- Experimental Emdeck-owned headless session server and optional Background
+  sessions view. Local/SSH workspace inventories, unattached agent status,
+  explicit control ownership, detach/stop, and cold layout restoration.
+- Authenticated bounded JSON API and CLI for pane creation, input, prompts,
+  waits and lifecycle reports. Opt-in Claude hook adapter and registered native
+  Claude/Codex resume; standalone Rust binary has no Tauri/WebView dependency.
+
+- Optional Workspaces terminal view with working-directory spaces, session tabs,
+  attention filtering, and preserved terminal/editor lifetime.
+- Saved, explicit connections to existing cmux TUI and tmux sessions over SSH,
+  with custom SSH shell/command support, disconnect and reconnect controls.
+- Claude Remote Control and other HTTPS provider-session links open their
+  official browser interfaces. Remote status/usage capabilities are labeled.
+- Native argv validation and per-window ownership; no automatic connection,
+  remote server installation, provider login, or local usage probing for
+  remotes.
+
 ## 0.1.22 — First public beta
 
 - Lightweight file editing, Markdown previews, and independent project windows.

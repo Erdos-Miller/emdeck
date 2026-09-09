@@ -14,6 +14,7 @@ import type {
 import { useLatest } from '../../../shared/hooks/useLatest';
 import { agentKind, agentStatus, inspectAgentScreen } from '../lib/agents';
 import { createTerminalFitter } from '../services/terminal-fit';
+import { remoteStatus } from '../services/connections';
 interface Props {
   pane: Pane;
   root: string;
@@ -181,11 +182,12 @@ export default function TerminalPane({
               clearTimeout(activityTimer);
               update('exited');
               term.writeln(
-                `\r\n\x1b[90m[Process exited${event.code === null ? '' : ` with code ${event.code}`} · restart to run again]\x1b[0m`
+                `\r\n\x1b[90m[${pane.remote ? 'SSH disconnected' : 'Process exited'}${event.code === null ? '' : ` with code ${event.code}`} · ${pane.remote ? 'reconnect to attach again' : 'restart to run again'}]\x1b[0m`
               );
             }
           },
-          enhancedUsage
+          enhancedUsage,
+          pane.remote?.target
         );
         if (disposed) {
           await call('terminal_close', { id });
@@ -206,7 +208,7 @@ export default function TerminalPane({
         if (!disposed) {
           update('error');
           term.writeln(
-            `\r\n\x1b[31m${String(e)}\x1b[0m\r\nCheck the shell and agent command in Settings.`
+            `\r\n\x1b[31m${String(e)}\x1b[0m\r\n${pane.remote ? 'Check OpenSSH installation, the saved connection, and SSH configuration.' : 'Check the shell and agent command in Settings.'}`
           );
         }
       }
@@ -287,7 +289,7 @@ export default function TerminalPane({
           title='Agent activity is detected from the live terminal screen. Connected and Output describe the terminal connection only.'
         >
           <i />
-          {agentStatus(state, observation).label}
+          {pane.remote ? remoteStatus(state) : agentStatus(state, observation).label}
         </span>
         <span className='spacer' />
         <button
@@ -298,7 +300,11 @@ export default function TerminalPane({
           <Copy size={12} />
         </button>
         {(state === 'exited' || state === 'error') && (
-          <button className='icon-button' title='Restart terminal' onClick={onRestart}>
+          <button
+            className='icon-button'
+            title={pane.remote ? 'Reconnect remote session' : 'Restart terminal'}
+            onClick={onRestart}
+          >
             <RotateCcw size={12} />
           </button>
         )}
@@ -309,14 +315,22 @@ export default function TerminalPane({
         >
           {maximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
         </button>
-        <button className='icon-button' title={`Close ${pane.name}`} onClick={onClose}>
+        <button
+          className='icon-button'
+          title={`${pane.remote ? 'Disconnect' : 'Close'} ${pane.name}`}
+          onClick={onClose}
+        >
           <X size={13} />
         </button>
       </header>
       <div className='terminal-host' ref={host} />
       <footer className='pane-footer'>
-        <span>{pane.cwd ? `./${pane.cwd}` : './'}</span>
-        <span>{pane.command || settings.shell || 'system shell'}</span>
+        <span>{pane.remote?.target.host ?? (pane.cwd ? `./${pane.cwd}` : './')}</span>
+        <span>
+          {pane.remote
+            ? `${pane.remote.target.backend} · ${pane.remote.target.session || 'remote shell'}`
+            : pane.command || settings.shell || 'system shell'}
+        </span>
       </footer>
     </section>
   );

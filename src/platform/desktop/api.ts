@@ -9,6 +9,7 @@ import type {
   CreateWorktree,
   TerminalEvent,
 } from '../../shared/contracts/workspace';
+import type { SshTarget } from '../../shared/contracts/remote';
 export const native = isTauri();
 export async function call<C extends DesktopCommand>(
   command: C,
@@ -50,10 +51,13 @@ export async function spawnTerminal(
   cols: number,
   rows: number,
   onEvent: (event: TerminalEvent) => void,
-  enhancedUsage = false
+  enhancedUsage = false,
+  remote?: SshTarget
 ) {
   const channel = new Channel<TerminalEvent>();
   channel.onmessage = onEvent;
+  if (remote)
+    return call('terminal_connect_remote', { root, target: remote, cols, rows, onEvent: channel });
   return call('terminal_spawn', {
     root,
     cwd,
