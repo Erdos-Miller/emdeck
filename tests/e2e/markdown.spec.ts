@@ -99,7 +99,7 @@ test('split updates unsaved content and keeps editor history across mode and fil
   await expect(editor).toBeVisible();
   await editor.evaluate(el => el.setAttribute('data-document-marker', 'preserved'));
   await editor.locator('.cm-content').click();
-  await page.keyboard.press('Control+Home');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowUp' : 'Control+Home');
   await page.keyboard.insertText('# Draft title\n\n');
   await expect(
     page
@@ -114,12 +114,12 @@ test('split updates unsaved content and keeps editor history across mode and fil
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(editor).toHaveAttribute('data-document-marker', 'preserved');
   await editor.locator('.cm-content').click();
-  await page.keyboard.press('Control+z');
+  await page.keyboard.press('ControlOrMeta+z');
   await expect(editor).not.toContainText('Draft title');
-  await page.keyboard.press('Control+Home');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowUp' : 'Control+Home');
   await page.keyboard.insertText('# Saved title\n\n');
   await page.getByRole('button', { name: 'Split', exact: true }).click();
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press('ControlOrMeta+s');
   await expect(page.getByLabel('Unsaved', { exact: true })).toHaveCount(0);
   await page.screenshot({ path: 'test-results/markdown-split.png' });
   await page.reload();

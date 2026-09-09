@@ -17,10 +17,10 @@ test('workspace renders without runtime errors; preview is explicit', async ({ p
 });
 test('edits, saves, and reopens a file with persisted content', async ({ page }) => {
   await page.getByTestId('code-editor').locator('.cm-content').click();
-  await page.keyboard.press('Control+End');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End');
   await page.keyboard.type('\n// persisted from UI test');
   await expect(page.getByLabel('Unsaved', { exact: true })).toBeVisible();
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press('ControlOrMeta+s');
   await expect(page.getByText('Saved app.ts', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Unsaved', { exact: true })).toHaveCount(0);
   await page.reload();
@@ -195,7 +195,7 @@ test('themes and run presets persist', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Type check npx tsc/ })).toBeVisible();
 });
 test('quick open and source control are reachable', async ({ page }) => {
-  await page.keyboard.press('Control+p');
+  await page.keyboard.press('ControlOrMeta+p');
   await page.getByLabel('Search files and actions').fill('README');
   await page.getByRole('button', { name: /README.md/ }).click();
   await expect(page.getByRole('tab', { name: /README.md/ })).toBeVisible();

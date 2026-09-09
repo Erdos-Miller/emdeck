@@ -32,7 +32,7 @@ while ((Get-Date) -lt $deadline) {
         if (-not $process) { continue }
         $identity = "$processId/$($process.StartTime.Ticks)"
         $nextCpu[$identity] = $process.CPU
-        if ($previousCpu.ContainsKey($identity)) { $cpu += [Math]::Max(0, $process.CPU - $previousCpu[$identity]) }
+        if ($previousCpu.ContainsKey($identity)) { $cpu += [Math]::Max(0.0, $process.CPU - $previousCpu[$identity]) }
         $workingSet += $process.WorkingSet64
         $privateBytes += $process.PrivateMemorySize64
     }

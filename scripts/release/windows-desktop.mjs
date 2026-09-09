@@ -1,7 +1,7 @@
 // Tests the real packaged WebView and native IPC, using an isolated profile.
 // CDP is enabled only in this test process, following playwright.dev/docs/webview2.
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -12,14 +12,17 @@ if (process.platform !== 'win32') throw new Error('This test targets Windows Web
 const executable = resolve(process.argv[2] ?? '');
 if (!executable.endsWith('emdeck-ide.exe')) throw new Error('Pass the Emdeck executable.');
 const directory = mkdtempSync(join(root, '.tmp/desktop-test-'));
-writeFileSync(join(directory, 'README.md'), '# Native desktop review\n\nLocal Markdown preview.\n');
-writeFileSync(join(directory, 'demo.ts'), "export const greeting = 'Hello from Emdeck';\n");
+const project = join(directory, 'project');
+mkdirSync(project);
+writeFileSync(join(project, 'README.md'), '# Native desktop review\n\nLocal Markdown preview.\n');
+writeFileSync(join(project, 'demo.ts'), "export const greeting = 'Hello from Emdeck';\n");
 const server = createServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
 await new Promise(resolve => server.close(resolve));
 const app = spawn(executable, [], {
-  windowsHide: true,
+  // This is the interactive application under test, including visible-window measurements.
+  windowsHide: false,
   stdio: 'ignore',
   env: {
     ...process.env,
@@ -33,6 +36,33 @@ app.on('error', error => {
 });
 let browser;
 let page;
+const measure = async name => {
+  if (!process.env.EMDECK_MEASURE_SECONDS) return;
+  const seconds = Number(process.env.EMDECK_MEASURE_SECONDS);
+  if (!Number.isInteger(seconds) || seconds < 10 || seconds > 600)
+    throw new Error('Measurement must be 10–600 seconds.');
+  const visibility = await page.evaluate(async () => ({
+    document: document.visibilityState,
+    window: await window.__TAURI_INTERNALS__.invoke('plugin:window|is_visible', { label: 'main' }),
+  }));
+  if (!visibility.window || visibility.document !== 'visible')
+    throw new Error('Measure a visible application window.');
+  execFileSync(
+    'pwsh',
+    [
+      '-NoProfile',
+      '-File',
+      join(root, 'scripts/release/measure-windows.ps1'),
+      '-AppProcessId',
+      String(app.pid),
+      '-Seconds',
+      String(seconds),
+      '-OutputPath',
+      join(directory, `${name}-performance.json`),
+    ],
+    { windowsHide: true, stdio: 'inherit' }
+  );
+};
 try {
   for (let attempt = 0; attempt < 60; attempt++) {
     if (processError) throw processError;
@@ -51,6 +81,8 @@ try {
   await page.waitForFunction(() => !!window.__TAURI_INTERNALS__);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  await expect(page.getByRole('heading', { name: /Your code. Your agents./ })).toBeVisible();
+  await measure('idle');
   // Seed only the isolated profile's remembered project; startup uses real IPC.
   await page.evaluate(
     path =>
@@ -58,7 +90,7 @@ try {
         'relay:last-project',
         JSON.stringify({ root: path, name: 'Desktop test' })
       ),
-    directory
+    project
   );
   await page.reload();
   await expect(page.getByRole('tree', { name: 'Project files' })).toBeVisible();
@@ -70,7 +102,7 @@ try {
   await page.keyboard.insertText('// Native save verified\n');
   await page.keyboard.press('Control+s');
   await expect
-    .poll(() => readFileSync(join(directory, 'demo.ts'), 'utf8'))
+    .poll(() => readFileSync(join(project, 'demo.ts'), 'utf8'))
     .toContain('Native save verified');
   await page.getByRole('treeitem', { name: /README.md/ }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
@@ -95,26 +127,7 @@ try {
   await page.getByTitle('Toggle terminal panel', { exact: true }).click();
   await expect(page.locator('.xterm[data-native-test="preserved"]')).toHaveCount(1);
   await page.screenshot({ path: join(directory, 'native-six-terminals.png') });
-  if (process.env.EMDECK_MEASURE_SECONDS) {
-    const seconds = Number(process.env.EMDECK_MEASURE_SECONDS);
-    if (!Number.isInteger(seconds) || seconds < 10 || seconds > 600)
-      throw new Error('Measurement must be 10–600 seconds.');
-    execFileSync(
-      'pwsh',
-      [
-        '-NoProfile',
-        '-File',
-        join(root, 'scripts/release/measure-windows.ps1'),
-        '-AppProcessId',
-        String(app.pid),
-        '-Seconds',
-        String(seconds),
-        '-OutputPath',
-        join(directory, 'six-terminal-performance.json'),
-      ],
-      { windowsHide: true, stdio: 'inherit' }
-    );
-  }
+  await measure('six-terminal');
   for (let index = 0; index < 6; index++) {
     await page
       .locator('.terminal-pane')

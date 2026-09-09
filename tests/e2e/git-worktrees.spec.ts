@@ -90,13 +90,13 @@ test('worktrees use a reusable tab, preserve dirty editors and open each folder 
     { path: '/projects/first-agent' },
   ]);
   await expect(page.locator('.project-switch')).toContainText('first');
-  await page.keyboard.press('Control+s');
+  await page.keyboard.press('ControlOrMeta+s');
   expect(await worktreeCalls(page, 'save_file')).toEqual([]);
   await page.getByRole('tab', { name: /notes\.ts/ }).click();
   await expect(page.getByTestId('code-editor')).toContainText('// work in progress');
   await worktreeFixture(page);
   await expect(page.getByRole('tab', { name: 'Worktrees', exact: true })).toHaveCount(1);
-  await page.keyboard.press('Control+w');
+  await page.keyboard.press('ControlOrMeta+w');
   await expect(page.getByRole('tab', { name: 'Worktrees', exact: true })).toHaveCount(0);
   await expect(page.getByTestId('code-editor')).toContainText('// work in progress');
 });
