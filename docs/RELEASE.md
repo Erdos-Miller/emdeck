@@ -6,10 +6,10 @@ signing account. A compiled binary alone is not release approval.
 
 ## Repository and licensing
 
-The intended public home is `Erdos-Miller/emdeck`, under Apache-2.0, copyright
-Erdos Miller. `LICENSE` is the canonical license text; `NOTICE` records the
-project attribution. Keep `package.json` private to prevent accidental npm
-publication; that flag does not make the GitHub repository private.
+The public home is `Erdos-Miller/emdeck`, under Apache-2.0, copyright Erdos
+Miller. `LICENSE` is the canonical license text; `NOTICE` records the project
+attribution. Keep `package.json` private to prevent accidental npm publication;
+that flag does not make the GitHub repository private.
 
 Before the first push, run redacted source secret scanning and review staged
 files. The repository excludes build outputs, local profiles, `.env` files,
@@ -57,11 +57,12 @@ acknowledgments; no security vulnerability is waived.
 - **Package Emdeck:** manual preview builds or reusable signed packaging.
   Windows CI installs into a disposable runner, checks native launch/close,
   bundled licenses, real WebView file saving/Markdown/six terminals,
-  same-version reinstall/data retention, and uninstall. macOS mounts each DMG,
-  copies the app, checks its notices/signature and launches/quits it. Ubuntu
-  installs the `.deb`, opens a native window under Xvfb, requests a normal close
-  and removes the package. This is not proof of upgrade compatibility with every
-  historical version.
+  external-change protection, worktrees, Bun commands, same-version
+  reinstall/data retention, and uninstall. macOS mounts each DMG, copies the
+  app, checks its notices/signature and launches/quits it. Ubuntu installs the
+  `.deb`, opens a native window under Xvfb, requests a normal close and removes
+  the package. This is not proof of upgrade compatibility with every historical
+  version.
 - **Draft release:** manually select an existing version tag to run checks, then
   packaging, then create a draft GitHub prerelease with installers,
   source-commit manifests, notices and SHA-256 checksums. The tag must match
@@ -103,22 +104,29 @@ outside repository automation. See the official
 [Windows](https://v2.tauri.app/distribute/sign/windows/) and
 [macOS](https://v2.tauri.app/distribute/sign/macos/) guides.
 
-## Acceptance checklist
+## Per-release acceptance checklist
+
+Complete this checklist for each release and attach its results to the GitHub
+release. The tagged source is built before these final results exist; do not
+infer that an unchecked template item is a failed test. Actual results belong in
+[Validation](VALIDATION.md) and the release's validation record.
 
 - [ ] All four remote platform checks and packaging jobs pass on the release
       commit.
 - [ ] Clean installs launch and close on supported real/virtual operating
       systems.
-- [ ] An older installed version upgrades while preserving real settings and
-      projects.
+- [ ] Previous-version profile compatibility and installer data retention are
+      checked. Record the exact versions and distinguish profile migration from
+      an in-place installer upgrade; never imply that all historical versions
+      were tested.
 - [ ] File saves, external-change conflicts, Git worktrees and commands behave
       correctly in the installed app.
 - [ ] Multiple native terminals survive resizing/layout changes and terminate on
       closing.
 - [ ] Multi-hour terminal soak completes; desktop CPU/memory observations are
       attached.
-- [ ] Signing/notarization succeeds, or the beta is explicitly approved and
-      labeled unsigned.
+- [x] The first beta is explicitly approved and labeled unsigned. Future
+      releases must confirm signing/notarization or repeat that decision.
 - [x] Linux beta uses the Ubuntu `.deb` with system-managed WebKitGTK libraries.
       AppImage distribution is deferred until its bundled system libraries have
       their notices/source information reviewed.
@@ -134,7 +142,12 @@ The Windows package job also runs `scripts/release/windows-desktop.mjs` against
 the installed executable. It uses a unique test profile and synthetic project,
 with a loopback CDP port enabled only for that subprocess, following
 [Playwright's WebView2 testing guide](https://playwright.dev/docs/webview2). No
-debugging port is configured in the shipped application.
+debugging port is configured in the shipped application. WebView2 150 and later
+ignore environment overrides in an elevated process, so disposable GitHub
+Windows runners temporarily apply and remove an executable-specific HKLM test
+policy. Developer machines use process environment settings only. The optional
+**Review Windows installer** workflow repeats these checks against a selected
+Package Emdeck artifact without rebuilding it.
 
 On Windows,
 `scripts/release/measure-windows.ps1 -AppProcessId <pid> -Seconds 7200` samples

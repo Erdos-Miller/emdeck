@@ -3,7 +3,7 @@
 Versions through 0.1.3 were released as Relay; versions 0.1.4–0.1.14 were
 released as Veldri. Historical artifact names below are unchanged.
 
-## 0.1.20 — Open-source beta preparation
+## 0.1.20 — First public beta
 
 - Apache-2.0 selected by the maintainer; public repository created under
   `Erdos-Miller/emdeck`. Added contributor, security, privacy, installation and
@@ -16,19 +16,48 @@ released as Veldri. Historical artifact names below are unchanged.
   license texts covering the four planned native targets. License expressions
   were checked for 339 installed JavaScript production/development packages.
   Notices and first-party attribution are included as installer resources.
-- Full local verification passed: 37 unit tests, 1 Bun integration test, 27
+- Full local verification passed: 37 unit tests, 1 Bun integration test, 30
   native tests and 52 browser workflows, plus lint, types, format, architecture,
-  Rust formatting and Clippy. Three native tests are opt-in, including the new
-  terminal soak. Its 15-second smoke run passed with six simultaneous real
-  shells, output, resizing and shutdown.
-- Workflow syntax and PowerShell parsing passed. The release workflows cover
-  Windows x64, macOS Intel/Apple Silicon and Ubuntu x64, enforce version/commit
-  consistency and attach checksums to draft prereleases. Actual remote build
-  results and the full soak will be recorded after they finish.
-- The maintainer chose an explicitly unsigned first beta. Signing integration is
-  prepared, but no signing/notarization credentials are configured. Installer,
-  multi-hour performance and platform acceptance checks are not implied by the
-  local browser tests; see [Release process](RELEASE.md).
+  Rust formatting and Clippy. Three native tests are opt-in: two provider
+  integrations and the terminal soak. The latter runs separately before
+  publication. React Doctor retains four reviewed false positives and 52
+  advisory warnings; see [React audit](REACT-AUDIT.md).
+- Native Windows review caught a transient atomic-save failure. Saves now retry
+  brief replacement locks for up to 500 ms, rechecking the disk revision on
+  every attempt. Three real Windows file-lock tests cover recovery, permanent
+  failure without data loss, and rejection of an intervening external edit.
+- The real packaged Windows WebView passed project restoration, file saving,
+  Markdown preview, six simultaneous PTYs, layout/hide preservation, normal
+  close, external-edit protection, a Git diff in an editor tab, worktree
+  creation/removal, an independent project window, and a detected Bun command.
+  Fixtures contain no user repository, credentials or provider accounts.
+- Disposable Windows Server 2025 CI passed install, bundled-notice checks,
+  native launch/close, same-version reinstall with retained data, and uninstall.
+  Windows 11 was reviewed locally. Both macOS 15.7.9 architectures passed DMG
+  mounting, installation by copying the app, resource/signature checks, launch
+  and normal quit. Ubuntu 24.04.5 passed `.deb` install, native launch/close
+  under Xvfb and package removal. CI browser workflows use Chromium on
+  macOS/Linux, not those operating systems' native WebViews.
+- An actual 0.1.19 executable created an isolated profile with a project, Light
+  theme, layout preferences and a saved file. The 0.1.20 executable restored all
+  of them. This verifies older-profile compatibility; it is separate from the CI
+  same-version reinstall and does not claim an in-place 0.1.19 NSIS upgrade.
+- Recorded two-minute visible-window idle and six-terminal measurements in
+  [Performance](PERFORMANCE.md), including raw samples and their scope. The
+  separate two-hour streaming/resize soak must complete before publication; its
+  final results are attached to the release rather than inferred from these
+  short observations.
+- Workflow syntax and PowerShell parsing passed. The final tagged release reruns
+  all four platform checks and installer jobs, enforces matching version/commit
+  manifests, and attaches SHA-256 checksums. Review its
+  [release record](https://github.com/Erdos-Miller/emdeck/releases/tag/v0.1.20)
+  for the final run and soak results. Earlier candidate runs found and resolved
+  macOS shortcut assumptions, Linux window-manager startup timing, and elevated
+  Windows WebView test configuration.
+- The maintainer approved an explicitly unsigned beta. Windows signing and Apple
+  notarization are not configured; macOS uses ad-hoc signing. The beta supplies
+  Ubuntu `.deb` packages; AppImage packaging awaits a separate review of bundled
+  system-library notices/source information.
 
 ## 0.1.19 — Architecture and project conventions
 

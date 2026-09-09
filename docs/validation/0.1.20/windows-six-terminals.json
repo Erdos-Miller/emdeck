@@ -1,0 +1,146 @@
+{
+  "samples": [
+    {
+      "utc": "2026-09-09T19:44:00.2013077Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 3.22,
+      "workingSetMiB": 1277.16,
+      "privateMiB": 727.45
+    },
+    {
+      "utc": "2026-09-09T19:44:05.9370503Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.82,
+      "workingSetMiB": 1360.49,
+      "privateMiB": 722.62
+    },
+    {
+      "utc": "2026-09-09T19:44:11.6543720Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.0,
+      "workingSetMiB": 1451.62,
+      "privateMiB": 721.8
+    },
+    {
+      "utc": "2026-09-09T19:44:17.3985008Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 1.09,
+      "workingSetMiB": 1439.79,
+      "privateMiB": 706.81
+    },
+    {
+      "utc": "2026-09-09T19:44:23.1403705Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.27,
+      "workingSetMiB": 1438.86,
+      "privateMiB": 706.21
+    },
+    {
+      "utc": "2026-09-09T19:44:28.8620939Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 1.09,
+      "workingSetMiB": 1440.75,
+      "privateMiB": 708.05
+    },
+    {
+      "utc": "2026-09-09T19:44:34.6168550Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.54,
+      "workingSetMiB": 1440.66,
+      "privateMiB": 707.96
+    },
+    {
+      "utc": "2026-09-09T19:44:40.3526993Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.27,
+      "workingSetMiB": 1440.49,
+      "privateMiB": 707.79
+    },
+    {
+      "utc": "2026-09-09T19:44:46.0244621Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.55,
+      "workingSetMiB": 1439.34,
+      "privateMiB": 706.36
+    },
+    {
+      "utc": "2026-09-09T19:44:51.7618969Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.54,
+      "workingSetMiB": 1440.34,
+      "privateMiB": 711.18
+    },
+    {
+      "utc": "2026-09-09T19:44:57.5671741Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 1.08,
+      "workingSetMiB": 1440.88,
+      "privateMiB": 711.3
+    },
+    {
+      "utc": "2026-09-09T19:45:03.2665425Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.27,
+      "workingSetMiB": 1439.65,
+      "privateMiB": 709.81
+    },
+    {
+      "utc": "2026-09-09T19:45:08.9710146Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.27,
+      "workingSetMiB": 1439.64,
+      "privateMiB": 709.8
+    },
+    {
+      "utc": "2026-09-09T19:45:14.6823600Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.0,
+      "workingSetMiB": 1439.64,
+      "privateMiB": 709.8
+    },
+    {
+      "utc": "2026-09-09T19:45:20.3798600Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.82,
+      "workingSetMiB": 1440.5,
+      "privateMiB": 711.08
+    },
+    {
+      "utc": "2026-09-09T19:45:26.0954684Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.82,
+      "workingSetMiB": 1440.39,
+      "privateMiB": 710.96
+    },
+    {
+      "utc": "2026-09-09T19:45:31.7641125Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.55,
+      "workingSetMiB": 1440.43,
+      "privateMiB": 710.95
+    },
+    {
+      "utc": "2026-09-09T19:45:37.5010988Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.54,
+      "workingSetMiB": 1439.64,
+      "privateMiB": 709.84
+    },
+    {
+      "utc": "2026-09-09T19:45:43.1436746Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.83,
+      "workingSetMiB": 1439.67,
+      "privateMiB": 709.83
+    },
+    {
+      "utc": "2026-09-09T19:45:48.8543156Z",
+      "processes": 19,
+      "cpuPercentOfOneCore": 0.55,
+      "workingSetMiB": 1440.11,
+      "privateMiB": 710.85
+    }
+  ],
+  "durationSeconds": 120,
+  "scope": "Emdeck and currently attached descendants, including WebView2 and agent shells; working-set sums can double-count shared pages"
+}
