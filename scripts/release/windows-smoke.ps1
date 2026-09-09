@@ -41,6 +41,9 @@ try {
     if ($startedApp.MainWindowHandle -eq 0 -or -not $startedApp.Responding) { throw 'Installed application did not open a responsive window.' }
     ./scripts/release/measure-windows.ps1 -AppProcessId $startedApp.Id -Seconds 30 -OutputPath '.tmp/install-performance.json'
     if (-not $startedApp.CloseMainWindow() -or -not $startedApp.WaitForExit(20000)) { throw 'Application did not close gracefully.' }
+    $env:EMDECK_MEASURE_SECONDS = '30'
+    node scripts/release/windows-desktop.mjs $executable
+    if ($LASTEXITCODE -ne 0) { throw 'Installed desktop workflow failed.' }
     $profile = Join-Path $env:LOCALAPPDATA 'dev.relay.ide'
     New-Item -ItemType Directory -Path $profile -Force | Out-Null
     $sentinel = Join-Path $profile 'emdeck-upgrade-smoke.txt'

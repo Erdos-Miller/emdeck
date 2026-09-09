@@ -54,7 +54,8 @@ is not bundled into the IDE. Review any newly introduced license before adding
 it to an allowlist.
 
 The generated reports cover package-manager dependencies. Platform system
-components and libraries added by AppImage bundling require a packaging review;
-do not treat these reports as an inventory of every byte in an installer.
-Tauri's distribution dependencies and separately installed Git/agent CLIs retain
-their own license terms.
+components require a packaging review; the beta distributes an Ubuntu `.deb`
+using system-managed shared libraries. AppImage distribution is deferred; do not
+treat these reports as an inventory of every byte in an installer. Tauri's
+distribution dependencies and separately installed Git/agent CLIs retain their
+own license terms.

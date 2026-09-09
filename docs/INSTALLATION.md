@@ -5,19 +5,18 @@ Download builds from the project's
 release is published, build from source using the README. Match the version,
 operating system and processor in the asset name.
 
-| Platform            | Asset                              | Requirements                                                            |
-| ------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
-| Windows x64         | `Emdeck-<version>-windows-x64.exe` | Windows 10/11, WebView2 runtime                                         |
-| macOS Apple Silicon | `Emdeck-<version>-macos-arm64.dmg` | A supported macOS version; see release notes                            |
-| macOS Intel         | `Emdeck-<version>-macos-x64.dmg`   | A supported macOS version; see release notes                            |
-| Linux x64           | `.deb` or `.AppImage`              | Initially targeted at Ubuntu 24.04; WebKitGTK 4.1/platform dependencies |
+| Platform            | Asset                              | Requirements                                      |
+| ------------------- | ---------------------------------- | ------------------------------------------------- |
+| Windows x64         | `Emdeck-<version>-windows-x64.exe` | Windows 10/11, WebView2 runtime                   |
+| macOS Apple Silicon | `Emdeck-<version>-macos-arm64.dmg` | A supported macOS version; see release notes      |
+| macOS Intel         | `Emdeck-<version>-macos-x64.dmg`   | A supported macOS version; see release notes      |
+| Linux x64           | `Emdeck-<version>-linux-x64.deb`   | Ubuntu 24.04; WebKitGTK 4.1/platform dependencies |
 
 Run the Windows installer. On macOS, open the DMG and drag Emdeck to
 Applications. On Ubuntu, install the downloaded `.deb` with
 `sudo apt install ./Emdeck-<version>-linux-x64.deb`, substituting the actual
-filename. AppImage builds must be made executable and may need FUSE support.
-Other Linux distributions are not automatically certified by a successful Ubuntu
-build.
+filename. The first beta provides a Debian package for Ubuntu 24.04. Other Linux
+distributions are not automatically certified by a successful Ubuntu build.
 
 Release notes state whether the downloads are signed. Unsigned beta builds can
 show Windows/macOS warnings or be blocked by device policy. Do not disable
@@ -56,6 +55,5 @@ restored after a crash.
 ## Uninstall
 
 Use Windows Installed Apps, remove Emdeck from macOS Applications, or use the
-Linux package manager. For AppImage, remove the downloaded executable.
-Uninstalling may retain local settings and recent paths; consult
-[Privacy](PRIVACY.md) before removing profile data manually.
+Linux package manager. Uninstalling may retain local settings and recent paths;
+consult [Privacy](PRIVACY.md) before removing profile data manually.

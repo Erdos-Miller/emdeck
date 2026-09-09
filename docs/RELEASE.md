@@ -19,10 +19,10 @@ Keep internal repository material and real-user screenshots out of public docs.
 
 Enable Issues, private vulnerability reporting, dependency alerts, secret
 scanning/push protection, and branch protection on the default branch. Require
-all four `Check <platform>` checks plus `Security and licenses`, reject force
-pushes/deletion, require resolved review conversations, and review pull requests
-before merging. GitHub organization policy and account permissions may restrict
-these settings.
+all four `Check <platform>` checks plus `security / Security and licenses`,
+reject force pushes/deletion, require resolved review conversations, and review
+pull requests before merging. GitHub organization policy and account permissions
+may restrict these settings.
 
 ## Local verification
 
@@ -56,8 +56,12 @@ acknowledgments; no security vulnerability is waived.
   weekly to catch newly disclosed advisories.
 - **Package Emdeck:** manual preview builds or reusable signed packaging.
   Windows CI installs into a disposable runner, checks native launch/close,
-  bundled licenses, same-version reinstall/data retention, and uninstall. This
-  is not proof of upgrade compatibility with every historical version.
+  bundled licenses, real WebView file saving/Markdown/six terminals,
+  same-version reinstall/data retention, and uninstall. macOS mounts each DMG,
+  copies the app, checks its notices/signature and launches/quits it. Ubuntu
+  installs the `.deb`, opens a native window under Xvfb, requests a normal close
+  and removes the package. This is not proof of upgrade compatibility with every
+  historical version.
 - **Draft release:** a version tag runs checks, then packaging, then creates a
   draft GitHub prerelease with installers, source-commit manifests, notices and
   SHA-256 checksums. The tag must match package/Cargo/Tauri versions and the
@@ -109,8 +113,9 @@ outside repository automation. See the official
       attached.
 - [ ] Signing/notarization succeeds, or the beta is explicitly approved and
       labeled unsigned.
-- [ ] AppImage-added system libraries have their required notices/source
-      information reviewed.
+- [x] Linux beta uses the Ubuntu `.deb` with system-managed WebKitGTK libraries.
+      AppImage distribution is deferred until its bundled system libraries have
+      their notices/source information reviewed.
 - [ ] Release notes list remaining limitations and exact tested platform
       versions.
 
@@ -118,6 +123,12 @@ The opt-in `bun run test:soak` runs six synthetic native shells for two hours,
 streaming output, resizing PTYs and checking shutdown. It uses temporary files
 and no provider account. For a short smoke run set `EMDECK_SOAK_SECONDS=15`.
 This test does not measure WebView rendering or provider-agent behavior.
+
+The Windows package job also runs `scripts/release/windows-desktop.mjs` against
+the installed executable. It uses a unique test profile and synthetic project,
+with a loopback CDP port enabled only for that subprocess, following
+[Playwright's WebView2 testing guide](https://playwright.dev/docs/webview2). No
+debugging port is configured in the shipped application.
 
 On Windows,
 `scripts/release/measure-windows.ps1 -AppProcessId <pid> -Seconds 7200` samples

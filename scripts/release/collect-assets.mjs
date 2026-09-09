@@ -8,7 +8,7 @@ const targets = {
   'windows-x64': ['x86_64-pc-windows-msvc', ['.exe']],
   'macos-arm64': ['aarch64-apple-darwin', ['.dmg']],
   'macos-x64': ['x86_64-apple-darwin', ['.dmg']],
-  'linux-x64': ['x86_64-unknown-linux-gnu', ['.deb', '.AppImage']],
+  'linux-x64': ['x86_64-unknown-linux-gnu', ['.deb']],
 };
 const label = process.argv[2];
 if (!(label in targets)) throw new Error('Unknown release target');
