@@ -81,6 +81,19 @@ impl WindowTerminals {
     }
 }
 
+pub(crate) fn program_command(program: impl AsRef<std::ffi::OsStr>, cwd: &Path) -> CommandBuilder {
+    let mut cmd = CommandBuilder::new(program);
+    #[cfg(windows)]
+    for (key, value) in std::env::vars_os() {
+        cmd.env(key, value);
+    }
+    cmd.cwd(cwd);
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("TERM_PROGRAM", "Emdeck");
+    cmd
+}
+
 fn shell_command(shell: &str, command: &str, cwd: &Path) -> CommandBuilder {
     let program = if shell.trim().is_empty() {
         if cfg!(windows) {
@@ -96,13 +109,7 @@ fn shell_command(shell: &str, command: &str, cwd: &Path) -> CommandBuilder {
         .unwrap_or_default()
         .to_string_lossy()
         .to_lowercase();
-    let mut cmd = CommandBuilder::new(program.clone());
-    // portable-pty refreshes Windows variables from the registry. Preserve
-    // process overrides (including PATH entries from a shell or tool manager).
-    #[cfg(windows)]
-    for (key, value) in std::env::vars_os() {
-        cmd.env(key, value);
-    }
+    let mut cmd = program_command(&program, cwd);
     if !command.trim().is_empty() {
         match name.as_str() {
             "powershell" | "pwsh" => {
@@ -118,10 +125,6 @@ fn shell_command(shell: &str, command: &str, cwd: &Path) -> CommandBuilder {
     } else if name == "powershell" || name == "pwsh" {
         cmd.arg("-NoLogo");
     }
-    cmd.cwd(cwd);
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
-    cmd.env("TERM_PROGRAM", "Emdeck");
     cmd
 }
 
@@ -149,6 +152,32 @@ impl Terminals {
         enhanced_usage: bool,
         callback: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
     ) -> Result<String> {
+        let probe = if enhanced_usage && command.trim() == "claude" {
+            Some(crate::services::agent_usage::Probe::new()?)
+        } else {
+            None
+        };
+        let launch = match &probe {
+            Some(p) => p.command(shell)?,
+            None => command.into(),
+        };
+        self.spawn_prepared(
+            shell_command(shell, &launch, cwd),
+            probe,
+            cols,
+            rows,
+            callback,
+        )
+    }
+
+    pub(crate) fn spawn_prepared(
+        &self,
+        command: CommandBuilder,
+        probe: Option<crate::services::agent_usage::Probe>,
+        cols: u16,
+        rows: u16,
+        callback: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
+    ) -> Result<String> {
         let mut sessions = self.sessions.lock().map_err(err)?;
         if self.closed.load(Ordering::Relaxed) {
             return Err("This workspace window has closed.".into());
@@ -166,21 +195,11 @@ impl Terminals {
                 pixel_height: 0,
             })
             .map_err(err)?;
-        let probe = if enhanced_usage && command.trim() == "claude" {
-            Some(crate::services::agent_usage::Probe::new()?)
-        } else {
-            None
-        };
-        let launch = match &probe {
-            Some(p) => p.command(shell)?,
-            None => command.into(),
-        };
-        let mut child = pair
-            .slave
-            .spawn_command(shell_command(shell, &launch, cwd))
-            .map_err(err)?;
+        let mut child = pair.slave.spawn_command(command).map_err(err)?;
         drop(pair.slave);
-        let killer = child.clone_killer();
+        let killer = emdeck_session::child_killer(&*child).inspect_err(|_| {
+            let _ = child.kill();
+        })?;
         let mut reader = pair.master.try_clone_reader().map_err(err)?;
         let writer = pair.master.take_writer().map_err(err)?;
         let id = format!("pty-{}", self.counter.fetch_add(1, Ordering::Relaxed));

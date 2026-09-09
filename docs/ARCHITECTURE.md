@@ -2,7 +2,8 @@
 
 Emdeck is one standalone desktop product, using Tauri 2/Rust, React/TypeScript,
 CodeMirror and xterm. It uses the system webview and adds no indexing service,
-language server, database or agent runtime.
+language server or database. Its optional headless server owns ordinary CLI
+processes; it does not replace their agent runtimes.
 
 ## Project conventions
 
@@ -48,6 +49,8 @@ src-tauri/src/
   commands/               Window authorization, IPC arguments and dispatch
   services/               Files, Git, worktrees, PTYs, Markdown and usage
   state/                  Per-window project authorization and lifetime
+src-tauri/runtime/        Independent session server, CLI, protocol, PTYs,
+                         private storage, lifecycle evidence and SSH bridge
 tests/
   unit/                   In-memory services and transformations
   integration/            Real local process execution
@@ -76,6 +79,17 @@ behavior.
 
 ## Lifetime and performance
 
+The optional Background sessions view is a client of `src-tauri/runtime`. That
+independent crate owns PTYs and bounded VT screen state; desktop windows own
+only connections and input leases. Native session commands scope connection IDs
+to the invoking window and add its identity to input ownership. The local
+capability never reaches React. SSH transports the same concurrent JSON RPC
+without installing or authenticating remote software implicitly. Structural
+server mutations are serialized independently of screen reads and input. The
+standalone server has no Tauri dependency; Windows' embedded fallback runs from
+a private copy so the IDE remains replaceable while agents work. See
+[persistence and automation](PERSISTENT-AGENTS.md).
+
 Opening a second project defaults to a new native window. Replacement resets
 that window's views only after the existing confirmation flow. Native project
 roots and terminal groups are keyed by the invoking window, not
@@ -90,6 +104,18 @@ Run discovery reads only the root listing and `package.json`. Its injected IO
 port makes cancellation and read limits testable without launching an app.
 Document reconciliation uses the current buffer when a read completes, keeping
 edits made while IO was pending. Git remains explicit or focus-triggered.
+
+The optional terminal workspace rail filters the existing pane tree; its xterm
+instances retain stable parents and keys. Saved remote profiles and view
+preferences are explicit UI state. Pure connection validation and space grouping
+live in the agents domain service. The typed remote command validates the
+invoking window's project, builds OpenSSH argv natively, and reuses the owned
+PTY lifetime. Structured multiplexer fields reject shell syntax. User-authored
+custom command text is one remote argument, never evaluated by a local shell.
+Remote panes do not start local provider usage probes. Browser-provider profiles
+dispatch only an explicitly requested HTTPS URL through the existing
+external-URL command. See [Remote sessions](REMOTE-SESSIONS.md) for capabilities
+and boundaries.
 
 Style imports retain their original cascade order. Responsive overrides load
 last. Linting, type checks, architecture checks and React Doctor are development

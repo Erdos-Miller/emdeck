@@ -20,7 +20,7 @@
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
     "test": "vitest run",
-    "test:native": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "test:native": "cargo test --manifest-path src-tauri/Cargo.toml --workspace --locked",
     "test:ui": "bun run test:e2e",
     "type-check": "tsc --noEmit && tsc -p tsconfig.tests.json --noEmit",
     "lint": "eslint . --fix",

@@ -25,6 +25,10 @@ portable-pty = "0.9"
 tempfile = "3"
 trash = "5"
 base64 = "0.22"
+emdeck-session = { path = "runtime" }
+
+[workspace]
+members = ["runtime"]
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 glib = "0.18.5"

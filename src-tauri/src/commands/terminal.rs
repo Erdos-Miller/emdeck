@@ -3,6 +3,27 @@ use crate::{services::terminal, state::Projects};
 use std::path::Path;
 use tauri::State;
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn terminal_connect_remote(
+    window: tauri::Window,
+    root: String,
+    target: crate::services::remote::SshTarget,
+    cols: u16,
+    rows: u16,
+    on_event: tauri::ipc::Channel<terminal::TerminalEvent>,
+    projects: State<'_, Projects>,
+    terminals: State<'_, terminal::WindowTerminals>,
+) -> Result<String> {
+    let root = projects.root(window.label(), &root)?;
+    let command = crate::services::remote::command(&target, &root)?;
+    terminals
+        .get(window.label())?
+        .spawn_prepared(command, None, cols, rows, move |event| {
+            on_event.send(event).is_ok()
+        })
+}
+
+#[tauri::command]
 // IPC keeps named frontend arguments; Tauri injects the two state parameters.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn terminal_spawn(

@@ -6,8 +6,16 @@ crash-report upload. It does not index projects or upload source code itself.
 Preferences, recent project paths, panel layout and saved run commands are
 stored in the local webview profile. Avoid putting credentials in saved
 commands; use the provider or operating system's credential facilities. Terminal
-scrollback is held in memory for the session. Closing a terminal/window ends its
-sessions; detached processes may continue independently.
+scrollback is held in memory for the session. Window-owned terminals end when
+their window closes; the optional background server owns a separate lifetime.
+
+Background sessions continue after closing Emdeck. Their machine profiles and
+view preferences are saved in the webview profile; workspace paths, launch
+commands and registered provider conversation IDs are stored in the server's
+private per-user directory. A random local capability stays on the native side.
+Terminal output remains in bounded memory. Remote metadata and selected screens
+travel through SSH. Disconnect and Detach leave processes running; Stop ends
+them explicitly. See [session storage and limits](PERSISTENT-AGENTS.md).
 
 Git network operations, terminal commands and installed agent CLIs can send data
 to their configured services. Those tools use their own authentication and

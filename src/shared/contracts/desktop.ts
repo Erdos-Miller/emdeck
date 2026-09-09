@@ -9,6 +9,8 @@ import type {
   Project,
   Worktree,
 } from './workspace';
+import type { SshTarget } from './remote';
+import type { MachineTarget, SessionAction } from './sessions';
 
 type Command<Args, Result> = { args: Args; result: Result };
 type FileLocation = { root: string; path: string };
@@ -16,6 +18,9 @@ type Repository = { root: string };
 
 /** Public IPC payloads. Window identity and authorization are injected by Tauri. */
 export interface DesktopCommands {
+  session_connect: Command<{ target: MachineTarget }, string>;
+  session_request: Command<{ connection: string; action: SessionAction }, unknown>;
+  session_disconnect: Command<{ connection: string }, void>;
   open_project: Command<{ path: string }, Project>;
   open_project_window: Command<{ path: string }, string>;
   startup_project: Command<Record<string, never>, string | null>;
@@ -56,6 +61,10 @@ export interface DesktopCommands {
     string
   >;
   terminal_write: Command<{ id: string; data: string }, void>;
+  terminal_connect_remote: Command<
+    Repository & { target: SshTarget; cols: number; rows: number; onEvent: unknown },
+    string
+  >;
   terminal_resize: Command<{ id: string; cols: number; rows: number }, void>;
   terminal_close: Command<{ id: string }, void>;
   codex_account_usage: Command<Record<string, never>, AccountUsage>;
