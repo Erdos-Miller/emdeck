@@ -1,0 +1,53 @@
+name: Review Windows installer
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Package Emdeck run containing release-windows-x64
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.6
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-windows-x64
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          path: .tmp/installer-review
+      - name: Review installed application
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $manifest = Get-Content .tmp/installer-review/windows-x64.json -Raw | ConvertFrom-Json
+          if ($manifest.version -ne $version -or $manifest.target -ne 'x86_64-pc-windows-msvc') { throw 'Installer version/target mismatch.' }
+          $destination = 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          Copy-Item -LiteralPath ".tmp/installer-review/Emdeck-$version-windows-x64.exe" -Destination "$destination/Emdeck_${version}_x64-setup.exe"
+          ./scripts/release/windows-smoke.ps1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: native-windows-evidence
+          include-hidden-files: true
+          path: |
+            .tmp/install-performance.json
+            .tmp/desktop-test-*/*.png
+            .tmp/desktop-test-*/*-performance.json
+            .tmp/desktop-test-*/startup.log
+          if-no-files-found: ignore
