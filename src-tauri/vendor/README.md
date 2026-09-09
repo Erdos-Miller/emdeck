@@ -17,7 +17,7 @@ path package; the inventory, source checks and resolved graph validation are
 therefore mandatory and run before every Rust audit. No GLib advisory is ignored
 in `deny.toml`.
 
-Linux CI runs GLib's existing iterator tests in release mode; compiler
+Linux CI runs an integration regression for GLib's string iterator in release mode; compiler
 optimization exposes the original invalid immutable out-pointer behavior. The
 upstream fix covers forward and backward iteration through the shared helper.
 Remove this vendor patch when Tauri's GTK stack accepts an upstream fixed GLib

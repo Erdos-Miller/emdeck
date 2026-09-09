@@ -180,7 +180,7 @@ export default function EditorContent({ model }: Props) {
             </span>
           </div>
           <div className='welcome-watermark' aria-hidden='true'>
-            v.
+            <img src='/emdeck.svg' alt='' />
           </div>
         </div>
       )}

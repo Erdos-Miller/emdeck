@@ -107,6 +107,9 @@ jobs:
           APPLE_PASSWORD: ${{ inputs.signed && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ inputs.signed && secrets.APPLE_TEAM_ID || '' }}
         run: |
+          if [ "$EMDECK_SIGNED" != 'true' ]; then
+            unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+          fi
           node scripts/release/macos-signing.mjs
           bun run tauri build --target "$RELEASE_TARGET" --bundles app,dmg
           codesign --verify --deep --strict "src-tauri/target/$RELEASE_TARGET/release/bundle/macos/Emdeck.app"

@@ -755,6 +755,7 @@ name = "emdeck-ide"
 version = "0.1.20"
 dependencies = [
  "base64 0.22.1",
+ "glib",
  "portable-pty",
  "serde",
  "serde_json",
