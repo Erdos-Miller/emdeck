@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Use `main` for reviewed source and `dev` for ongoing development; validate
+  both branches and keep routine dependency updates on `dev`.
+- Allow the Bun shell integration test to use its existing 15-second child
+  process budget on Windows CI instead of timing out after five seconds.
 - Publication scans cover every tracked file and publishable new source file,
   plus all fetched Git history, without path exclusions or inline suppressions.
   Local credential/configuration folders are ignored, and documentation omits

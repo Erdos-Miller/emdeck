@@ -42,7 +42,9 @@ build outputs are excluded. Neither source nor history scans have path
 exemptions, ignore-file suppressions or inline allow comments. Publication
 symlinks require explicit review rather than following them into local data.
 Screenshots and documentation must also be reviewed for private information that
-credential patterns cannot identify. Dependency updates are proposed weekly.
-Reviewed upstream maintenance notices are documented in
+credential patterns cannot identify. Dependency updates are maintained on `dev`;
+automated version-update pull requests are disabled under the two-branch policy.
+Vulnerability alerts and the weekly security audit remain enabled. Reviewed
+upstream maintenance notices are documented in
 [Dependency review](docs/DEPENDENCIES.md); vulnerabilities are not silently
 excluded to pass a build.
