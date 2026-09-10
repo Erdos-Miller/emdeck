@@ -1,8 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { absolutePath } from '../../src/shared/lib/paths';
-import { conflicts, resolveConflict } from '../../src/features/git/services/conflicts';
+import {
+  conflicts,
+  hasConflictMarkers,
+  resolveConflict,
+} from '../../src/features/git/services/conflicts';
 
 describe('merge conflict resolution', () => {
+  it('supports custom marker widths and unlabeled conflicts', () => {
+    const content =
+      'before\n<<<<<<<<<\nours\n|||||||||\nbase\n=========\ntheirs\n>>>>>>>>>\nafter\n';
+    const blocks = conflicts(content);
+    expect(blocks).toHaveLength(1);
+    expect(resolveConflict(content, blocks[0], 'both')).toBe('before\nours\ntheirs\nafter\n');
+  });
+  it('detects unfinished markers without rejecting ordinary operators', () => {
+    for (const content of [
+      '<<<<<<<\nunresolved',
+      '=======\r\n',
+      '||||||||| base\n',
+      '>>>>>>> incoming',
+    ])
+      expect(hasConflictMarkers(content)).toBe(true);
+    expect(hasConflictMarkers('const shifted = value << 7;\n// ======= separator\n')).toBe(false);
+  });
   it('resolves one block at a time without dropping surrounding code', () => {
     const source =
       'before\n<<<<<<< HEAD\nlocal\n=======\nincoming\n>>>>>>> feature\nbetween\n<<<<<<< HEAD\nsecond\n=======\nother\n>>>>>>> feature\nafter\n';

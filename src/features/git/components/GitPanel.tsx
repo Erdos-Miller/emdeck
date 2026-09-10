@@ -4,6 +4,7 @@ import {
   GitBranch,
   GitCommitHorizontal,
   GitFork,
+  GitMerge,
   Minus,
   Plus,
   RefreshCw,
@@ -23,6 +24,7 @@ interface Props {
   onDiff: (path: string, staged: boolean) => void;
   onBranches: () => void;
   onWorktrees: () => void;
+  onResolve: (path?: string) => void;
 }
 export default function GitPanel({
   git,
@@ -34,6 +36,7 @@ export default function GitPanel({
   onDiff,
   onBranches,
   onWorktrees,
+  onResolve,
 }: Props) {
   const handleBranchActionClick = () => onBranchAction('fetch');
   const handleBranchActionClick2 = () => onBranchAction('push');
@@ -48,14 +51,24 @@ export default function GitPanel({
   const handleCommitMessageChange: React.ComponentProps<'textarea'>['onChange'] = e =>
     setMessage(e.target.value);
   const [message, setMessage] = useState('');
+  const handleResolve = () => onResolve();
+  const conflicted = git?.changes.filter(change => change.conflict) ?? [];
   const staged = git?.changes.filter(c => ![' ', '?'].includes(c.index) && !c.conflict) ?? [];
-  const working = git?.changes.filter(c => c.working !== ' ' || c.index === '?') ?? [];
+  const working =
+    git?.changes.filter(c => !c.conflict && (c.working !== ' ' || c.index === '?')) ?? [];
   const render = (change: Change, isStaged: boolean) => {
     const handleOpenClick = () =>
-      change.conflict || change.index === '?' ? onOpen(change.path) : onDiff(change.path, isStaged);
-    const handleOpenFileClick = () => onOpen(change.path);
+      change.conflict
+        ? onResolve(change.path)
+        : change.index === '?'
+          ? onOpen(change.path)
+          : onDiff(change.path, isStaged);
+    const handleOpenFileClick = () =>
+      change.conflict ? onResolve(change.path) : onOpen(change.path);
     const handleActionClick = () =>
-      void onAction(isStaged ? 'unstage' : 'stage', change.path, change.originalPath);
+      change.conflict
+        ? onResolve(change.path)
+        : void onAction(isStaged ? 'unstage' : 'stage', change.path, change.originalPath);
     return (
       <div className='change-row' key={change.path}>
         <button className='change-file' title={change.path} onClick={handleOpenClick}>
@@ -71,18 +84,26 @@ export default function GitPanel({
                   : change.working}
           </span>
         </button>
-        <button className='icon-button' title='Open file' onClick={handleOpenFileClick}>
+        <button
+          className='icon-button'
+          title={change.conflict ? 'Resolve file' : 'Open file'}
+          onClick={handleOpenFileClick}
+        >
           <FileDiff size={13} />
         </button>
         <button
           disabled={busy}
           className='icon-button'
-          title={
-            isStaged ? 'Unstage file' : change.conflict ? 'Mark resolved by staging' : 'Stage file'
-          }
+          title={isStaged ? 'Unstage file' : change.conflict ? 'Resolve conflict' : 'Stage file'}
           onClick={handleActionClick}
         >
-          {isStaged ? <Minus size={13} /> : <Plus size={13} />}
+          {change.conflict ? (
+            <GitMerge size={13} />
+          ) : isStaged ? (
+            <Minus size={13} />
+          ) : (
+            <Plus size={13} />
+          )}
         </button>
       </div>
     );
@@ -136,7 +157,7 @@ export default function GitPanel({
           {git.operation && (
             <div className='git-operation' role='status'>
               <strong>{git.operation} in progress</strong>
-              <p>Resolve conflicted files, save and stage them, then continue.</p>
+              <p>Resolve conflicted files in the merge dialog, then continue.</p>
               <div className='git-sync-actions'>
                 <button
                   className='button primary'
@@ -154,6 +175,21 @@ export default function GitPanel({
                 </button>
               </div>
             </div>
+          )}
+          {conflicted.length > 0 && (
+            <>
+              <button
+                className='button secondary git-resolve-all'
+                disabled={busy}
+                onClick={handleResolve}
+              >
+                <GitMerge size={14} /> Resolve conflicts… ({conflicted.length})
+              </button>
+              <div className='git-group-title'>
+                MERGE CONFLICTS<span>{conflicted.length}</span>
+              </div>
+              {conflicted.map(change => render(change, false))}
+            </>
           )}
           <button className='git-worktrees' onClick={onWorktrees}>
             <GitFork size={15} />

@@ -31,6 +31,7 @@ export function useWorkspaceRefresh({
       if (latest.current.project?.root === p.root) {
         setGit(result);
         setGitRevision(value => value + 1);
+        return result;
       }
     } catch (e) {
       fail(e);
@@ -62,12 +63,14 @@ export function useWorkspaceRefresh({
     );
   };
   const refresh = async () => {
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       refreshDirectory(),
       ...[...latest.current.expanded].map(p => refreshDirectory(p)),
       refreshGit(),
       refreshFiles(),
     ]);
+    const result = results.at(-2);
+    return result?.status === 'fulfilled' ? result.value : undefined;
   };
   return { refreshGit, refreshDirectory, refreshFiles, refresh };
 }

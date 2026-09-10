@@ -13,6 +13,7 @@ interface Props {
   onAction: (action: string, reference: string) => void;
   onCreate: () => void;
   onWorktrees: () => void;
+  onResolve: () => void;
 }
 export default function BranchPicker({
   git,
@@ -21,6 +22,7 @@ export default function BranchPicker({
   onAction,
   onCreate,
   onWorktrees,
+  onResolve,
 }: Props) {
   const handleBranchesKeyDown: React.ComponentProps<'div'>['onKeyDown'] = e => {
     const inSubmenu = submenu.current?.contains(e.target as Node);
@@ -218,6 +220,11 @@ export default function BranchPicker({
             <p className='branch-operation'>
               {git.operation} in progress — resolve files in Source Control.
             </p>
+          )}
+          {git.changes.some(change => change.conflict) && (
+            <button className='button secondary branch-resolve' disabled={busy} onClick={onResolve}>
+              Resolve conflicts…
+            </button>
           )}
           <input
             autoFocus

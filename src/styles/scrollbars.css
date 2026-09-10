@@ -1,0 +1,39 @@
+/* Scroll containers should use overflow: auto so a bar is created only when
+   needed. Reveal its thumb on container hover without changing gutter width,
+   scroll position or terminal dimensions. Feature rules can extend the hover
+   target to a pane's header, or preserve intentionally hidden tab scrollbars. */
+:where(*) {
+  --scrollbar-thumb: transparent;
+}
+
+:where(:hover) {
+  --scrollbar-thumb: color-mix(in srgb, var(--muted) 28%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 7px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Avoid standards-based colors overriding WebKit thumb styling in webviews
+   that support both APIs. Zero specificity preserves feature overrides. */
+@supports not selector(::-webkit-scrollbar) {
+  :where(*) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}

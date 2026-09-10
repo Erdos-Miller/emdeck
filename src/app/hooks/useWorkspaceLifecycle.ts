@@ -103,7 +103,7 @@ export function useWorkspaceLifecycle({
     };
     const beforeUnload = (e: BeforeUnloadEvent) => {
       // Desktop windows use the explicit close confirmation below.
-      if (!native && hasUnsavedFiles(latest.current.files)) {
+      if (!native && (hasUnsavedFiles(latest.current.files) || latest.current.mergeDraftDirty)) {
         e.preventDefault();
       }
     };
@@ -124,10 +124,12 @@ export function useWorkspaceLifecycle({
             closePending = true;
             try {
               if (
-                (hasUnsavedFiles(latest.current.files) || latest.current.panes.length > 0) &&
+                (hasUnsavedFiles(latest.current.files) ||
+                  latest.current.mergeDraftDirty ||
+                  latest.current.panes.length > 0) &&
                 !(await confirm(
                   'Close this Emdeck window?',
-                  'Unsaved edits in this window will be discarded. Local terminals will end and remote connections will disconnect. Other Emdeck windows will stay open.',
+                  'Unsaved file and merge edits in this window will be discarded. Local terminals will end and remote connections will disconnect. Other Emdeck windows will stay open.',
                   'Close window',
                   true
                 ))

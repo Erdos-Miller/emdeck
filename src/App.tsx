@@ -8,6 +8,7 @@ import StatusBar from './app/components/StatusBar';
 import TerminalPanel from './app/components/TerminalPanel';
 import WorkspaceSidebar from './app/components/WorkspaceSidebar';
 import WorkspaceTopbar from './app/components/WorkspaceTopbar';
+import WorkspaceConflicts from './app/components/WorkspaceConflicts';
 import { useWorkspace } from './app/hooks/useWorkspace';
 import Settings from './features/settings/components/Settings';
 import Dialog, { Modal } from './shared/ui/Dialog';
@@ -85,6 +86,7 @@ export default function App() {
       {settingsOpen && (
         <Settings settings={settings} onChange={setSettings} onClose={handleSettingsOpenClose} />
       )}
+      <WorkspaceConflicts model={model} />
       {dialog && <Dialog spec={dialog} onClose={handleDialogClose} />}
       {palette && (
         <Modal title='Jump to a file or action' onClose={handleJumpToAFileClose}>

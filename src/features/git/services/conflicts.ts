@@ -8,21 +8,24 @@ export interface Conflict {
 }
 export const conflicts = (content: string): Conflict[] => {
   const result: Conflict[] = [];
-  const pattern = /^<<<<<<< (.*)\r?\n([\s\S]*?)^=======\r?\n([\s\S]*?)^>>>>>>> (.*)(?:\r?\n|$)/gm;
+  const pattern =
+    /^<{7,}(?: ([^\r\n]*))?\r?\n([\s\S]*?)^={7,}\r?\n([\s\S]*?)^>{7,}(?: ([^\r\n]*))?(?:\r?\n|$)/gm;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(content))) {
-    const ours = match[2].replace(/^\|\|\|\|\|\|\| .*\r?\n[\s\S]*$/m, '');
+    const ours = match[2].replace(/^\|{7,}(?: [^\r\n]*)?\r?\n[\s\S]*$/m, '');
     result.push({
       start: match.index,
       end: pattern.lastIndex,
       ours,
       theirs: match[3],
-      oursLabel: match[1].trim(),
-      theirsLabel: match[4].trim(),
+      oursLabel: match[1]?.trim() ?? 'Ours',
+      theirsLabel: match[4]?.trim() ?? 'Theirs',
     });
   }
   return result;
 };
+export const hasConflictMarkers = (content: string): boolean =>
+  /^(?:<{7,}|={7,}|>{7,}|\|{7,})(?:[ \t][^\r\n]*)?\r?$/m.test(content);
 export const resolveConflict = (
   content: string,
   conflict: Conflict,

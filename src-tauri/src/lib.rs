@@ -62,6 +62,8 @@ pub fn run() {
             commands::workspace::trash_entry,
             commands::workspace::reveal_entry,
             commands::git::git_snapshot,
+            commands::git::git_conflict,
+            commands::git::git_resolve_conflict,
             commands::git::git_action,
             commands::git::git_branch_action,
             commands::git::git_compare,
