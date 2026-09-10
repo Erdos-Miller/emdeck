@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { native } from '../../platform/desktop/api';
+import { paneName, terminalTitle } from '../../features/agents/services/terminal-title';
 import type { SshProfile } from '../../shared/contracts/remote';
 import type {
   AgentObservation,
@@ -50,7 +51,13 @@ export function useTerminalActions({
   setPaneStates,
   setPaneFocus,
 }: Dependencies) {
-  const addPane = (name: string, command = '', cwd = '', remote?: SshProfile) => {
+  const addPane = (
+    name: string,
+    command = '',
+    cwd = '',
+    remote?: SshProfile,
+    customName?: string
+  ) => {
     if (!project) {
       notify('Open a project folder first.');
       return false;
@@ -64,6 +71,7 @@ export function useTerminalActions({
       {
         id: crypto.randomUUID(),
         name,
+        customName,
         command,
         cwd,
         shell: settings.shell,
@@ -99,7 +107,7 @@ export function useTerminalActions({
         },
       ],
     });
-    if (data) addPane(data.name, data.command, data.cwd);
+    if (data) addPane(data.name, data.command, data.cwd, undefined, data.name);
   };
   const closePane = async (pane: Pane) => {
     const state = paneStates[pane.id];
@@ -108,7 +116,7 @@ export function useTerminalActions({
       state !== 'exited' &&
       state !== 'error' &&
       !(await confirm(
-        `${pane.remote ? 'Disconnect' : 'Close'} ${pane.name}?`,
+        `${pane.remote ? 'Disconnect' : 'Close'} ${paneName(pane)}?`,
         pane.remote
           ? pane.remote.target.backend === 'shell'
             ? 'Close this SSH connection. Processes in an ordinary remote shell may stop.'
@@ -176,19 +184,39 @@ export function useTerminalActions({
   const renameAgent = async (pane: Pane) => {
     const data = await ask({
       title: 'Rename session',
-      fields: [{ name: 'name', label: 'Session name', value: pane.name }],
+      description:
+        'Set a fixed name, or leave it empty to follow the title reported by the terminal.',
+      fields: [{ name: 'name', label: 'Session name', value: paneName(pane), optional: true }],
       submit: 'Rename',
     });
-    if (data?.name.trim())
+    if (data)
       setPanes(previous =>
-        previous.map(item => (item.id === pane.id ? { ...item, name: data.name.trim() } : item))
+        previous.map(item =>
+          item.id === pane.id ? { ...item, customName: terminalTitle(data.name) } : item
+        )
       );
   };
+  const updateTerminalTitle = useCallback(
+    (id: string, value: string) => {
+      const title = terminalTitle(value);
+      setPanes(previous => {
+        if (!previous.some(pane => pane.id === id && (pane.title ?? '') !== title)) return previous;
+        return previous.map(pane => (pane.id === id ? { ...pane, title } : pane));
+      });
+    },
+    [setPanes]
+  );
   const restartAgent = (pane: Pane) =>
     setPanes(previous =>
       previous.map(item =>
         item.id === pane.id
-          ? { ...item, restart: (item.restart ?? 0) + 1, startedAt: Date.now(), endedAt: undefined }
+          ? {
+              ...item,
+              title: undefined,
+              restart: (item.restart ?? 0) + 1,
+              startedAt: Date.now(),
+              endedAt: undefined,
+            }
           : item
       )
     );
@@ -201,6 +229,7 @@ export function useTerminalActions({
     updateAgentUsage,
     focusAgent,
     renameAgent,
+    updateTerminalTitle,
     restartAgent,
   };
 }

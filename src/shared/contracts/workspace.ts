@@ -116,6 +116,8 @@ export type PaneState = 'starting' | 'running' | 'output' | 'exited' | 'error' |
 export interface Pane {
   id: string;
   name: string;
+  title?: string;
+  customName?: string;
   command: string;
   cwd: string;
   shell: string;
@@ -151,6 +153,22 @@ export type TerminalEvent =
   | {
       type: 'usage';
       usage: AgentUsage;
+    }
+  | {
+      type: 'command';
+      command: AgentCommand;
+    };
+export type AgentCommand =
+  | {
+      op: 'showDiff';
+      reference: string;
+      working: boolean;
+    }
+  | {
+      op: 'openFile';
+      path: string;
+      line?: number;
+      column?: number;
     };
 export type AgentKind = 'claude' | 'codex' | 'gemini' | 'custom' | 'shell';
 export interface LimitWindow {

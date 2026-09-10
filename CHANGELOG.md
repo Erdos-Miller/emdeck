@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- Give the Windows Bun shell smoke test a bounded 60-second process budget and
+  report launch errors, timeout details and captured output instead of a null
+  exit-status assertion. Missing Bun now fails this required integration check.
+- Restore Ctrl/Cmd+V and Ctrl+Shift+V paste in regular and background terminals,
+  including clipboard images/files. Send a distinct Shift+Enter key for
+  multiline prompts and preserve Enter, Ctrl+J, Alt+Enter and Ctrl+C behavior.
+- Accept file drops and pasted image/file data in local terminal panes, with
+  quoted paths, private temporary storage, bounded uploads and no automatic
+  prompt submission. Explain unsupported file transfer in remote/background
+  panes.
+- Show agent-reported terminal titles in pane headers, agent cards, session tabs
+  and background sessions. Keep manually assigned names, and preserve running
+  terminals when their titles change.
+- Keep the New terminal menu inside the window: open below or above the toolbar
+  as space allows, scroll in short windows, and support keyboard navigation.
+- Preserve colors in new terminal and agent panes even when Emdeck was started
+  from a launcher with color output disabled. Apply the same behavior to
+  background sessions while retaining explicit per-command color preferences.
 - Add community feedback routes, structured bug/feature forms, a public roadmap,
   maintainer ownership, and a reviewed fork-to-dev contribution process.
 - Protect unsaved manual merge drafts when closing immediately after typing,

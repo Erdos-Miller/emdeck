@@ -355,10 +355,14 @@
 }
 
 .agent-popover {
-  position: absolute;
-  bottom: 35px;
-  right: 0;
-  width: 250px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  width: min(250px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .agent-option {

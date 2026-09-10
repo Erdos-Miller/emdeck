@@ -142,6 +142,7 @@ impl Engine {
         let info = PaneInfo {
             id: uuid::Uuid::new_v4().to_string(),
             generation: uuid::Uuid::new_v4().to_string(),
+            title: None,
             agent: agent::initial(&launch.command),
             launch,
             running: false,
@@ -186,6 +187,7 @@ impl Engine {
             .ok_or("Workspace no longer exists.")?;
         validate_launch(&mut info.launch, &workspace)?;
         info.generation = uuid::Uuid::new_v4().to_string();
+        info.title = None;
         info.started_at = terminal::now();
         info.restored = false;
         info.exit_code = None;

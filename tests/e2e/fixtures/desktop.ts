@@ -25,6 +25,17 @@ export const test = base.extend<{ desktop: void }>({
           if (id === undefined) throw new Error('Close listener is not registered');
           return callbacks.get(id)!({ event: 'tauri://close-requested', id, payload: null });
         };
+        state.__emdeckDrop = (payload: unknown) => {
+          const registered = calls.filter(
+            call =>
+              call.command === 'plugin:event|listen' && call.args.event === 'tauri://drag-drop'
+          );
+          if (!registered.length) throw new Error('Drop listener is not registered');
+          for (const call of registered) {
+            const id = Number(call.args.handler);
+            callbacks.get(id)?.({ event: 'tauri://drag-drop', id, payload });
+          }
+        };
         state.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
         state.__TAURI_INTERNALS__ = {
           metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },

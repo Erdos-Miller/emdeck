@@ -66,6 +66,25 @@ pub(crate) async fn terminal_write(
     terminals.get(window.label())?.write(&id, &data)
 }
 #[tauri::command]
+pub(crate) async fn terminal_attachment(
+    window: tauri::Window,
+    id: String,
+    name: String,
+    data: Vec<u8>,
+    terminals: State<'_, terminal::WindowTerminals>,
+) -> Result<String> {
+    terminals.get(window.label())?.attachment(&id, &name, &data)
+}
+#[tauri::command]
+pub(crate) async fn terminal_path_input(
+    window: tauri::Window,
+    id: String,
+    paths: Vec<String>,
+    terminals: State<'_, terminal::WindowTerminals>,
+) -> Result<String> {
+    terminals.get(window.label())?.path_input(&id, &paths)
+}
+#[tauri::command]
 pub(crate) async fn terminal_resize(
     window: tauri::Window,
     id: String,

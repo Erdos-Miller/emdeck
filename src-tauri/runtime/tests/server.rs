@@ -15,17 +15,25 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        Self::with_environment(&[])
+    }
+    fn with_environment(environment: &[(&str, &str)]) -> Self {
         let directory = tempfile::tempdir().unwrap();
-        let child = Self::spawn(directory.path());
+        let child = Self::spawn_with_environment(directory.path(), environment);
         let fixture = Self { directory, child };
         fixture.ready();
         fixture
     }
     fn spawn(home: &Path) -> Child {
+        Self::spawn_with_environment(home, &[])
+    }
+    fn spawn_with_environment(home: &Path, environment: &[(&str, &str)]) -> Child {
         let mut command = Command::new(env!("CARGO_BIN_EXE_emdeck-session"));
         command
             .arg("server")
             .env("EMDECK_SESSION_HOME", home)
+            .env("HOME", home)
+            .envs(environment.iter().copied())
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit());
@@ -97,6 +105,95 @@ fn waiting_command() -> &'static str {
     } else {
         "printf 'READY\\n'; sleep 120"
     }
+}
+
+#[test]
+fn detached_terminal_titles_reach_snapshots_and_reconnecting_clients() {
+    let fixture = Fixture::new();
+    let command = if cfg!(windows) {
+        "[Console]::Write(([char]27).ToString() + ']2;Fix detached task' + [char]7); Start-Sleep -Seconds 120"
+    } else {
+        "printf '\\033]2;Fix detached task\\007'; sleep 120"
+    };
+    let pane = fixture.pane(command);
+    until(|| fixture.read(&pane.id).pane.title.as_deref() == Some("Fix detached task"));
+    let snapshot: Snapshot = serde_json::from_value(fixture.call(Action::Snapshot {
+        after: None,
+        wait_ms: 0,
+    }))
+    .unwrap();
+    assert_eq!(
+        snapshot.panes[0].title.as_deref(),
+        Some("Fix detached task")
+    );
+    fixture.call(Action::Attach {
+        id: pane.id.clone(),
+        client: "first".into(),
+        takeover: false,
+    });
+    fixture.call(Action::Detach {
+        id: pane.id.clone(),
+        client: "first".into(),
+    });
+    let attached: PaneInfo = serde_json::from_value(fixture.call(Action::Attach {
+        id: pane.id.clone(),
+        client: "second".into(),
+        takeover: false,
+    }))
+    .unwrap();
+    assert_eq!(attached.title.as_deref(), Some("Fix detached task"));
+    let replay = fixture.read(&pane.id);
+    assert!(replay.reset);
+    assert_eq!(replay.pane.title.as_deref(), Some("Fix detached task"));
+    // Older saved sessions and servers omit this optional metadata.
+    let mut legacy = serde_json::to_value(attached).unwrap();
+    legacy.as_object_mut().unwrap().remove("title");
+    assert!(serde_json::from_value::<PaneInfo>(legacy)
+        .unwrap()
+        .title
+        .is_none());
+}
+
+#[test]
+fn terminal_colors_ignore_launcher_flags() {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+    let fixture = Fixture::with_environment(&[
+        ("EMDECK_COLOR_FIXTURE", "preserved"),
+        ("NO_COLOR", "1"),
+        ("FORCE_COLOR", "0"),
+        ("CLICOLOR", "0"),
+        ("CLICOLOR_FORCE", "0"),
+        ("NODE_DISABLE_COLORS", "1"),
+        ("TERM", "dumb"),
+        ("COLORTERM", ""),
+    ]);
+    std::fs::write(
+        fixture.directory.path().join("terminal-colors.mjs"),
+        include_str!("../../../tests/fixtures/terminal-colors.mjs"),
+    )
+    .unwrap();
+    let pane = fixture.pane("node terminal-colors.mjs");
+    until(|| !fixture.read(&pane.id).pane.running);
+    let result = fixture.read(&pane.id);
+    assert!(result.text.contains("EMDECK_COLOR_OK"), "{}", result.text);
+    assert!(result.text.contains("TRUECOLOR_OK"), "{}", result.text);
+    let mut parser = vt100::Parser::new(20, 80, 0);
+    parser.process(&STANDARD.decode(result.data).unwrap());
+    let foregrounds: Vec<_> = (0..20)
+        .flat_map(|row| (0..80).map(move |col| (row, col)))
+        .filter_map(|(row, col)| parser.screen().cell(row, col))
+        .filter(|cell| !cell.contents().trim().is_empty())
+        .map(|cell| cell.fgcolor())
+        .collect();
+    assert!(
+        foregrounds.contains(&vt100::Color::Idx(1)),
+        "{foregrounds:?}"
+    );
+    assert!(
+        foregrounds.contains(&vt100::Color::Rgb(17, 34, 51)),
+        "{foregrounds:?}"
+    );
 }
 
 #[test]

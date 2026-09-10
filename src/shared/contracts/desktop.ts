@@ -27,6 +27,7 @@ export interface DesktopCommands {
   startup_project: Command<Record<string, never>, string | null>;
   read_directory: Command<FileLocation, Entry[]>;
   read_file: Command<FileLocation, FileData>;
+  find_file: Command<{ root: string; name: string }, string[]>;
   read_image: Command<FileLocation, string>;
   save_file: Command<FileLocation & { content: string; revision: string }, FileData>;
   create_entry: Command<FileLocation & { directory: boolean }, void>;
@@ -64,6 +65,8 @@ export interface DesktopCommands {
     string
   >;
   terminal_write: Command<{ id: string; data: string }, void>;
+  terminal_attachment: Command<{ id: string; name: string; data: number[] }, string>;
+  terminal_path_input: Command<{ id: string; paths: string[] }, string>;
   terminal_connect_remote: Command<
     Repository & { target: SshTarget; cols: number; rows: number; onEvent: unknown },
     string

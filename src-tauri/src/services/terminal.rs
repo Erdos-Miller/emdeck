@@ -12,8 +12,13 @@ use std::{
 };
 use tauri::ipc::Channel;
 
+mod attachments;
+
 #[cfg(test)]
 mod stress;
+
+#[cfg(test)]
+mod color_tests;
 
 #[cfg(all(test, windows))]
 mod environment_tests;
@@ -30,11 +35,16 @@ pub enum TerminalEvent {
     Usage {
         usage: crate::services::agent_usage::Usage,
     },
+    Command {
+        command: crate::services::agent_command::AgentCommand,
+    },
 }
 pub struct Session {
     master: Box<dyn MasterPty + Send>,
     writer: Box<dyn Write + Send>,
     killer: Box<dyn ChildKiller + Send + Sync>,
+    program: String,
+    attachments: attachments::Attachments,
 }
 #[derive(Default)]
 pub struct Terminals {
@@ -88,9 +98,7 @@ pub(crate) fn program_command(program: impl AsRef<std::ffi::OsStr>, cwd: &Path) 
         cmd.env(key, value);
     }
     cmd.cwd(cwd);
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
-    cmd.env("TERM_PROGRAM", "Emdeck");
+    emdeck_session::configure_terminal_environment(&mut cmd);
     cmd
 }
 
@@ -152,22 +160,20 @@ impl Terminals {
         enhanced_usage: bool,
         callback: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
     ) -> Result<String> {
-        let probe = if enhanced_usage && command.trim() == "claude" {
-            Some(crate::services::agent_usage::Probe::new()?)
+        let reporting = enhanced_usage && command.trim() == "claude";
+        let probe = if reporting {
+            crate::services::agent_usage::Probe::reporting()?
         } else {
-            None
+            crate::services::agent_usage::Probe::new()?
         };
-        let launch = match &probe {
-            Some(p) => p.command(shell)?,
-            None => command.into(),
+        let launch = if reporting {
+            probe.command(shell)?
+        } else {
+            command.into()
         };
-        self.spawn_prepared(
-            shell_command(shell, &launch, cwd),
-            probe,
-            cols,
-            rows,
-            callback,
-        )
+        let mut command = shell_command(shell, &launch, cwd);
+        command.env("EMDECK_AGENT_DIR", probe.directory());
+        self.spawn_prepared(command, Some(probe), cols, rows, callback)
     }
 
     pub(crate) fn spawn_prepared(
@@ -195,6 +201,7 @@ impl Terminals {
                 pixel_height: 0,
             })
             .map_err(err)?;
+        let program = command.get_argv()[0].to_string_lossy().into_owned();
         let mut child = pair.slave.spawn_command(command).map_err(err)?;
         drop(pair.slave);
         let killer = emdeck_session::child_killer(&*child).inspect_err(|_| {
@@ -209,6 +216,8 @@ impl Terminals {
                 master: pair.master,
                 writer,
                 killer,
+                program,
+                attachments: attachments::Attachments::default(),
             },
         );
         let map = self.sessions.clone();
@@ -228,6 +237,14 @@ impl Terminals {
                 }) {
                     break;
                 }
+                if let Some(command) = probe
+                    .as_ref()
+                    .and_then(|p| crate::services::agent_command::take(p.directory()))
+                {
+                    if !output_callback(TerminalEvent::Command { command }) {
+                        break;
+                    }
+                }
                 // The reporter writes before printing its status line. Inspect the
                 // timestamp on output so a short final burst cannot be throttled away.
                 if let Some(usage) = probe
@@ -241,6 +258,14 @@ impl Terminals {
                         }
                     }
                 }
+            }
+            // A command written just before exit is only on disk; the probe directory
+            // is deleted with the pane, so claim it here or it is lost unread.
+            if let Some(command) = probe
+                .as_ref()
+                .and_then(|p| crate::services::agent_command::take(p.directory()))
+            {
+                let _ = output_callback(TerminalEvent::Command { command });
             }
             if let Some(usage) = probe.as_ref().and_then(|p| p.read()) {
                 let _ = output_callback(TerminalEvent::Usage { usage });
@@ -260,6 +285,17 @@ impl Terminals {
         let session = sessions.get_mut(id).ok_or("Terminal has exited.")?;
         session.writer.write_all(data.as_bytes()).map_err(err)?;
         session.writer.flush().map_err(err)
+    }
+    pub fn attachment(&self, id: &str, name: &str, data: &[u8]) -> Result<String> {
+        let mut sessions = self.sessions.lock().map_err(err)?;
+        let session = sessions.get_mut(id).ok_or("Terminal has exited.")?;
+        let path = session.attachments.save(name, data)?;
+        attachments::paths_input(&session.program, &[path])
+    }
+    pub fn path_input(&self, id: &str, paths: &[String]) -> Result<String> {
+        let sessions = self.sessions.lock().map_err(err)?;
+        let session = sessions.get(id).ok_or("Terminal has exited.")?;
+        attachments::paths_input(&session.program, paths)
     }
     pub fn resize(&self, id: &str, cols: u16, rows: u16) -> Result<()> {
         let sessions = self.sessions.lock().map_err(err)?;
@@ -370,7 +406,9 @@ mod tests {
                     assert_eq!(code, Some(0));
                     break;
                 }
-                TerminalEvent::Usage { .. } => panic!("Plain shells must not create usage probes"),
+                TerminalEvent::Usage { .. } | TerminalEvent::Command { .. } => {
+                    panic!("Plain shells must not create agent probes")
+                }
             }
         }
         assert!(String::from_utf8_lossy(&output).contains("emdeck-pty-ok"));

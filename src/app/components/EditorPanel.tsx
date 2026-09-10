@@ -35,6 +35,7 @@ type Props = {
     | 'showConflicts'
     | 'changeFile'
     | 'openFile'
+    | 'reveal'
     | 'settings'
     | 'changeCursor'
     | 'saveFile'

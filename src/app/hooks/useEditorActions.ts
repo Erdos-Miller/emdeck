@@ -11,6 +11,7 @@ type Dependencies = Pick<
   | 'latest'
   | 'setActive'
   | 'setActiveDiffId'
+  | 'setReveal'
   | 'setWorktreesActive'
   | 'setTerminalFull'
   | 'setFiles'
@@ -33,6 +34,7 @@ export function useEditorActions({
   latest,
   setActive,
   setActiveDiffId,
+  setReveal,
   setWorktreesActive,
   setTerminalFull,
   setFiles,
@@ -68,8 +70,14 @@ export function useEditorActions({
       }
     }
   };
-  const openFile = async (path: string, p = latest.current.project) => {
+  const openFile = async (
+    path: string,
+    p = latest.current.project,
+    target?: { line: number; column?: number }
+  ) => {
     if (!p) return;
+    if (target)
+      setReveal(previous => ({ ...target, path, sequence: (previous?.sequence ?? 0) + 1 }));
     if (latest.current.files.some(f => f.path === path)) {
       setActive(path);
       setActiveDiffId(null);

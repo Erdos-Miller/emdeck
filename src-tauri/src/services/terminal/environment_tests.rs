@@ -70,7 +70,9 @@ fn inherits_launch_path() {
                 assert_eq!(code, Some(0), "{}", String::from_utf8_lossy(&output));
                 break;
             }
-            TerminalEvent::Usage { .. } => panic!("A plain shell must not create usage probes"),
+            TerminalEvent::Usage { .. } | TerminalEvent::Command { .. } => {
+                panic!("A plain shell must not create agent probes")
+            }
         }
     }
     assert!(String::from_utf8_lossy(&output).contains("EMDECK_LAUNCH_PATH_OK"));

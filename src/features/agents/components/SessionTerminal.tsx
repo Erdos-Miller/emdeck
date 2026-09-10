@@ -1,3 +1,4 @@
+import { sessionName } from '../services/terminal-title';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -7,6 +8,8 @@ import type { SessionPane, SessionRead } from '../../../shared/contracts/session
 import type { Settings } from '../../../shared/contracts/workspace';
 import { terminalInput } from '../services/session-model';
 import { createTerminalFitter } from '../services/terminal-fit';
+import { bindTerminalAttachments } from '../lib/terminalAttachments';
+import { bindTerminalKeyboard } from '../lib/terminalKeyboard';
 
 interface Props {
   connection: string;
@@ -28,6 +31,7 @@ export default function SessionTerminal({
   const terminal = useRef<Terminal | null>(null);
   const resizeCurrent = useRef<(() => void) | null>(null);
   const [error, setError] = useState('');
+  const [attachmentError, setAttachmentError] = useState('');
   const [takeover, setTakeover] = useState(0);
   const appearance = useRef(settings);
   useEffect(() => {
@@ -61,6 +65,17 @@ export default function SessionTerminal({
         owned = false;
       }
     };
+    const detachAttachments = bindTerminalAttachments(host.current, term, {
+      id: () => null,
+      unavailable:
+        'Attachments in background sessions require a file path on the session machine. Paste that path as text; file uploads are not available in this view yet.',
+      onError: error => {
+        if (!disposed) setAttachmentError(String(error));
+      },
+    });
+    bindTerminalKeyboard(term, error => {
+      if (!disposed) setAttachmentError(String(error));
+    });
     const resize = () => {
       if (disposed || !owned || !host.current?.clientWidth || !host.current.clientHeight) return;
       fitter.fit();
@@ -129,6 +144,7 @@ export default function SessionTerminal({
       clearInterval(heartbeat);
       observer.disconnect();
       input.dispose();
+      detachAttachments();
       fitter.dispose();
       term.dispose();
       terminal.current = null;
@@ -149,13 +165,14 @@ export default function SessionTerminal({
     }
   }, [settings.theme, settings.terminalFontSize, settings.scrollback]);
   const handleTakeover = () => setTakeover(value => value + 1);
+  const handleDismissAttachment = () => setAttachmentError('');
   return (
     <section
       className='terminal-pane session-terminal'
-      aria-label={`${pane.launch.name} persistent terminal`}
+      aria-label={`${sessionName(pane)} persistent terminal`}
     >
       <header className='pane-header'>
-        <strong>{pane.launch.name}</strong>
+        <strong title={sessionName(pane)}>{sessionName(pane)}</strong>
         <span
           className={`session-state ${pane.agent.state}`}
           title={`${pane.agent.source}: ${pane.agent.reason}`}
@@ -177,6 +194,12 @@ export default function SessionTerminal({
         <div className='session-error' role='alert'>
           {error}
           <button onClick={handleTakeover}>Take control / retry</button>
+        </div>
+      )}
+      {attachmentError && (
+        <div className='session-error' role='alert'>
+          {attachmentError}
+          <button onClick={handleDismissAttachment}>Dismiss</button>
         </div>
       )}
       <div className='terminal-host' ref={host} />

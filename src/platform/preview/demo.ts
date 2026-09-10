@@ -53,6 +53,9 @@ export async function demoCall<T>(command: string, args: Record<string, unknown>
       );
       break;
     }
+    case 'find_file':
+      result = Object.keys(files).filter(file => file.split('/').pop() === args.name);
+      break;
     case 'read_file':
       if (!(path in files)) throw new Error('File not found');
       result = { content: files[path], revision: files[path] } satisfies FileData;

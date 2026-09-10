@@ -4,7 +4,9 @@ import '@xterm/xterm/css/xterm.css';
 import { Copy, Maximize2, Minimize2, RotateCcw, TerminalSquare, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { call, native, spawnTerminal } from '../../../platform/desktop/api';
+import { findPaths, linkRange } from '../services/terminalLinks';
 import type {
+  AgentCommand,
   AgentObservation,
   AgentUsage,
   Pane,
@@ -15,6 +17,9 @@ import { useLatest } from '../../../shared/hooks/useLatest';
 import { agentKind, agentStatus, inspectAgentScreen } from '../lib/agents';
 import { createTerminalFitter } from '../services/terminal-fit';
 import { remoteStatus } from '../services/connections';
+import { paneName } from '../services/terminal-title';
+import { bindTerminalAttachments } from '../lib/terminalAttachments';
+import { bindTerminalKeyboard } from '../lib/terminalKeyboard';
 interface Props {
   pane: Pane;
   root: string;
@@ -24,9 +29,11 @@ interface Props {
   onClose: () => void;
   onRestart: () => void;
   onState: (id: string, state: PaneState) => void;
+  onTitle: (id: string, title: string) => void;
   onError: (error: unknown) => void;
   onObservation: (id: string, observation: AgentObservation | null) => void;
   onUsage: (id: string, usage: AgentUsage | null) => void;
+  onCommand: (id: string, command: AgentCommand) => void;
   enhancedUsage: boolean;
   focusRequest: number;
   selected: boolean;
@@ -41,9 +48,11 @@ export default function TerminalPane({
   onClose,
   onRestart,
   onState,
+  onTitle,
   onError,
   onObservation,
   onUsage,
+  onCommand,
   enhancedUsage,
   focusRequest,
   selected,
@@ -57,7 +66,7 @@ export default function TerminalPane({
     fitRef = useRef<ReturnType<typeof createTerminalFitter> | null>(null);
   const [state, setState] = useState<PaneState>(native ? 'starting' : 'preview');
   const [observation, setObservation] = useState<AgentObservation | undefined>();
-  const callbacks = useLatest({ onState, onError, onObservation, onUsage });
+  const callbacks = useLatest({ onState, onTitle, onError, onObservation, onUsage, onCommand });
 
   // Launch inputs are sampled only when the session identity changes. Appearance
   // updates and pane renames must never terminate a running agent.
@@ -87,11 +96,49 @@ export default function TerminalPane({
     term.loadAddon(fit);
     term.open(host.current);
     terminal.current = term;
+    const detachAttachments = bindTerminalAttachments(host.current, term, {
+      id: () => nativeId.current,
+      unavailable: pane.remote
+        ? 'Transfer the file to the remote machine, then paste its remote path. Emdeck does not upload dropped files over SSH yet.'
+        : undefined,
+      onError: error => callbacks.current.onError(error),
+    });
+    const title = term.onTitleChange(value => {
+      if (!disposed) callbacks.current.onTitle(pane.id, value);
+    });
     const fitter = createTerminalFitter(term, () => fit.fit(), {
       request: callback => requestAnimationFrame(callback),
       cancel: id => cancelAnimationFrame(id),
     });
     fitRef.current = fitter;
+    // Remote output names remote files; a local search would open the wrong one.
+    if (!pane.remote)
+      term.registerLinkProvider({
+        provideLinks(row, callback) {
+          const buffer = term.buffer.active;
+          let first = row;
+          while (first > 1 && buffer.getLine(first - 1)?.isWrapped) first--;
+          // Untrimmed rows keep every row exactly one width wide, so offsets stay divisible.
+          let text = buffer.getLine(first - 1)?.translateToString(false) ?? '';
+          for (let next = first + 1; buffer.getLine(next - 1)?.isWrapped; next++)
+            text += buffer.getLine(next - 1)?.translateToString(false) ?? '';
+          callback(
+            findPaths(text).map(match => ({
+              range: linkRange(match, first, term.cols),
+              text: text.slice(match.start, match.end),
+              activate: (event: MouseEvent) => {
+                if (!event.ctrlKey && !event.metaKey) return;
+                callbacks.current.onCommand(pane.id, {
+                  op: 'openFile',
+                  path: match.path,
+                  line: match.line,
+                  column: match.column,
+                });
+              },
+            }))
+          );
+        },
+      });
     const element = host.current;
     element.addEventListener('wheel', fitter.cancel, { capture: true, passive: true });
     element.addEventListener('pointerdown', fitter.cancel, true);
@@ -176,6 +223,8 @@ export default function TerminalPane({
               }, 1400);
             } else if (event.type === 'usage') {
               callbacks.current.onUsage(pane.id, event.usage);
+            } else if (event.type === 'command') {
+              callbacks.current.onCommand(pane.id, event.command);
             } else {
               ended = true;
               nativeId.current = null;
@@ -221,16 +270,7 @@ export default function TerminalPane({
         );
       else if (!ended && native && pendingInput.length < 4096) pendingInput += data;
     });
-    term.attachCustomKeyEventHandler(e => {
-      // F5 belongs to the workspace Run action, including when a terminal has focus.
-      if (e.key === 'F5') return false;
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyC') {
-        if (e.type === 'keydown')
-          void navigator.clipboard.writeText(term.getSelection()).catch(callbacks.current.onError);
-        return false;
-      }
-      return true;
-    });
+    bindTerminalKeyboard(term, error => callbacks.current.onError(error));
     return () => {
       disposed = true;
       clearTimeout(activityTimer);
@@ -243,6 +283,8 @@ export default function TerminalPane({
       element.removeEventListener('pointerdown', fitter.cancel, true);
       element.removeEventListener('keydown', fitter.cancel, true);
       input.dispose();
+      detachAttachments();
+      title.dispose();
       term.dispose();
       terminal.current = null;
       const id = nativeId.current;
@@ -276,14 +318,14 @@ export default function TerminalPane({
   return (
     <section
       className={`terminal-pane ${maximized ? 'maximized' : ''} ${selected ? 'selected-agent' : ''}`}
-      aria-label={`${pane.name} terminal`}
+      aria-label={`${paneName(pane)} terminal`}
       onFocusCapture={onFocus}
     >
       <header className='pane-header'>
         <span className='pane-icon' style={{ color: pane.color }}>
           <TerminalSquare size={13} />
         </span>
-        <strong>{pane.name}</strong>
+        <strong title={paneName(pane)}>{paneName(pane)}</strong>
         <span
           className={`pane-state ${state}`}
           title='Agent activity is detected from the live terminal screen. Connected and Output describe the terminal connection only.'
@@ -317,7 +359,7 @@ export default function TerminalPane({
         </button>
         <button
           className='icon-button'
-          title={`${pane.remote ? 'Disconnect' : 'Close'} ${pane.name}`}
+          title={`${pane.remote ? 'Disconnect' : 'Close'} ${paneName(pane)}`}
           onClick={onClose}
         >
           <X size={13} />

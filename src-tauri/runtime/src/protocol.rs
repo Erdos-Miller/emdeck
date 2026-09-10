@@ -42,6 +42,8 @@ pub struct Launch {
 pub struct PaneInfo {
     pub id: String,
     pub generation: String,
+    #[serde(default)]
+    pub title: Option<String>,
     pub launch: Launch,
     pub running: bool,
     pub restored: bool,
