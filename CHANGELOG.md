@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Protect unsaved manual merge drafts when closing immediately after typing,
+  including before React finishes updating the interface.
 - Resolve conflicts in a file-list modal with complete Ours/Theirs choices and a
   three-pane manual merge editor. Results are staged per file, with draft
   preservation, stale-version checks, binary/deletion handling and explicit

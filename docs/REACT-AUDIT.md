@@ -2,6 +2,12 @@
 
 ## Unreleased — conflict resolution modal
 
+The immediate-close fix was audited again with the same pinned command: four
+reviewed errors and 63 advisories, with no new diagnostics. Draft transitions
+update the close guard outside React state updaters and render; layout cleanup
+clears it on unmount. The regression requests native close in the editor
+mutation microtask and also verifies closing after discarding the draft.
+
 React Doctor 0.9.13 reports the same four reviewed Worktrees false positives and
 63 advisory warnings. The new merge UI was split into the file dialog,
 version/result panes, footer and a hook with an injected IO port. Duplicate path

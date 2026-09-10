@@ -124,6 +124,11 @@ in the native window's unsaved-edit check. Open editor buffers are checked
 before reading and applying a resolution; unsaved tabs must be saved or closed.
 Shared modal keyboard handling belongs only to the topmost dialog.
 
+Merge draft transitions publish their dirty flag synchronously to a per-window
+close guard. Native close events read that guard directly, so closing
+immediately after an edit does not depend on a deferred React render or effect.
+Draft cleanup clears the guard when the resolver unmounts.
+
 The optional terminal workspace rail filters the existing pane tree; its xterm
 instances retain stable parents and keys. Saved remote profiles and view
 preferences are explicit UI state. Pure connection validation and space grouping

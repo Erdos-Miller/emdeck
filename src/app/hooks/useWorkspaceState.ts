@@ -91,8 +91,11 @@ export function useWorkspaceState() {
   const [conflictRequest, setConflictRequest] = useState<{ root: string; path?: string } | null>(
     null
   );
-  const [mergeDraftDirty, setMergeDraftDirty] = useState(false);
-  const latest = useLatest({ project, files, panes, expanded, settings, mergeDraftDirty });
+  const mergeDraftDirty = useRef(false);
+  const setMergeDraftDirty = useCallback((dirty: boolean) => {
+    mergeDraftDirty.current = dirty;
+  }, []);
+  const latest = useLatest({ project, files, panes, expanded, settings });
 
   const gitLock = useRef(false),
     opening = useRef(false),

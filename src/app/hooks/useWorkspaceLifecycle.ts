@@ -28,6 +28,7 @@ type Dependencies = Pick<ReturnType<typeof useTabActions>, 'saveCurrentFile' | '
     | 'setRunsOpen'
     | 'setAgentMenu'
     | 'latest'
+    | 'mergeDraftDirty'
     | 'confirm'
   >;
 export function useWorkspaceLifecycle({
@@ -49,6 +50,7 @@ export function useWorkspaceLifecycle({
   setRunsOpen,
   setAgentMenu,
   latest,
+  mergeDraftDirty,
   confirm,
 }: Dependencies) {
   const handlers = useLatest({
@@ -103,7 +105,7 @@ export function useWorkspaceLifecycle({
     };
     const beforeUnload = (e: BeforeUnloadEvent) => {
       // Desktop windows use the explicit close confirmation below.
-      if (!native && (hasUnsavedFiles(latest.current.files) || latest.current.mergeDraftDirty)) {
+      if (!native && (hasUnsavedFiles(latest.current.files) || mergeDraftDirty.current)) {
         e.preventDefault();
       }
     };
@@ -125,7 +127,7 @@ export function useWorkspaceLifecycle({
             try {
               if (
                 (hasUnsavedFiles(latest.current.files) ||
-                  latest.current.mergeDraftDirty ||
+                  mergeDraftDirty.current ||
                   latest.current.panes.length > 0) &&
                 !(await confirm(
                   'Close this Emdeck window?',
@@ -161,6 +163,7 @@ export function useWorkspaceLifecycle({
     fail,
     confirm,
     latest,
+    mergeDraftDirty,
     setAgentMenu,
     setBranchMenu,
     setContext,
