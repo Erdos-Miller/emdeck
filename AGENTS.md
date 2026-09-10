@@ -6,6 +6,8 @@ standards documented here and has no private repository dependencies.
 
 - Use Node 22 and Bun 1.3.6. Commit `bun.lock`; do not create another JS
   lockfile.
+- Keep repository branches limited to `main` and `dev`. Develop on `dev` and
+  promote to `main` through the required checks and independent review.
 - Keep domain services independent of React, Tauri and browser storage. Receive
   IO through typed ports. Compose features in `src/app`, never through sibling
   feature imports. Contracts belong in `src/shared/contracts`.
