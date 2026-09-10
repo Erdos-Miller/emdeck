@@ -169,7 +169,7 @@ test('manual conflict controls remain reachable at the minimum window size and e
   await page.screenshot({ path: testInfo.outputPath('merge-small-window.png') });
 });
 
-test('closing a native window protects manual drafts and Escape closes only the top dialog', async ({
+test('closing immediately after a merge edit protects the draft and Escape closes only the top dialog', async ({
   page,
 }) => {
   await prepareConflicts(page);
@@ -178,19 +178,25 @@ test('closing a native window protects manual drafts and Escape closes only the 
   const editor = dialog.getByRole('region', { name: 'Merged result' }).locator('.cm-content');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+a');
-  await page.keyboard.insertText('keep this manual draft\n');
   await expect
     .poll(() =>
       page.evaluate(() => (window as unknown as Record<string, unknown>).__emdeckCloseReady)
     )
     .toBe(true);
-  await page.evaluate(() => {
+  await editor.evaluate(element => {
     const state = window as unknown as {
       __emdeckCloseTasks: Promise<void>[];
       __emdeckRequestClose: () => Promise<void>;
     };
-    state.__emdeckCloseTasks.push(state.__emdeckRequestClose());
+    // Request close as soon as the editor changes, before React can defer draft propagation.
+    const observer = new MutationObserver(() => {
+      if (!element.textContent?.includes('keep this manual draft')) return;
+      observer.disconnect();
+      queueMicrotask(() => state.__emdeckCloseTasks.push(state.__emdeckRequestClose()));
+    });
+    observer.observe(element, { childList: true, characterData: true, subtree: true });
   });
+  await page.keyboard.insertText('keep this manual draft\n');
   const closing = page.getByRole('dialog', { name: 'Close this Emdeck window?', exact: true });
   await expect(closing).toBeVisible();
   await page.keyboard.press('Escape');
@@ -206,4 +212,15 @@ test('closing a native window protects manual drafts and Escape closes only the 
   expect(
     await page.evaluate(() => (window as unknown as Record<string, unknown>).__emdeckResolved)
   ).toEqual([]);
+  await page.evaluate(async () => {
+    const state = window as unknown as {
+      __emdeckCloseTasks: Promise<void>[];
+      __emdeckRequestClose: () => Promise<void>;
+    };
+    await Promise.all(state.__emdeckCloseTasks);
+    await state.__emdeckRequestClose();
+  });
+  expect(
+    await page.evaluate(() => (window as unknown as Record<string, unknown>).__emdeckDestroyed)
+  ).toEqual(['main']);
 });

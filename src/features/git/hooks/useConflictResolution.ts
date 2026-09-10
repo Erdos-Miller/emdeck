@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type {
   ConflictChoice,
   ConflictPort,
@@ -12,6 +12,10 @@ interface Draft {
   content: string;
   manual: boolean;
 }
+const hasDirtyDrafts = (drafts: Record<string, Draft>) =>
+  Object.values(drafts).some(
+    draft => draft.manual && draft.content !== (draft.source.working.content ?? '')
+  );
 interface Options {
   paths: string[];
   initialPath?: string;
@@ -31,6 +35,7 @@ export function useConflictResolution({
     initialPath && paths.includes(initialPath) ? initialPath : (paths[0] ?? '')
   );
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const currentDrafts = useRef(drafts);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -38,18 +43,23 @@ export function useConflictResolution({
   const [discarding, setDiscarding] = useState(false);
   const savingRef = useRef(false);
   const callbacks = useLatest({ port, onDirtyChange, onClose });
+  const updateDrafts = useCallback(
+    (update: (previous: Record<string, Draft>) => Record<string, Draft>) => {
+      const next = update(currentDrafts.current);
+      currentDrafts.current = next;
+      // Native close events can arrive before React commits the editor's next render.
+      callbacks.current.onDirtyChange(hasDirtyDrafts(next));
+      setDrafts(next);
+    },
+    [callbacks]
+  );
   const remaining = paths;
   const draft = drafts[selected];
-  const dirty = Object.values(drafts).some(
-    draft => draft.manual && draft.content !== (draft.source.working.content ?? '')
-  );
+  const dirty = hasDirtyDrafts(drafts);
   useEffect(() => {
     if (!saving && !dirty && !paths.includes(selected)) setSelected(paths[0] ?? '');
   }, [paths, selected, saving, dirty]);
-  useEffect(() => {
-    callbacks.current.onDirtyChange(dirty);
-  }, [dirty, callbacks]);
-  useEffect(() => () => callbacks.current.onDirtyChange(false), [callbacks]);
+  useLayoutEffect(() => () => callbacks.current.onDirtyChange(false), [callbacks]);
   useEffect(() => {
     if (!selected) return;
     let cancelled = false;
@@ -59,7 +69,7 @@ export function useConflictResolution({
       .read(selected)
       .then(source => {
         if (cancelled) return;
-        setDrafts(previous => {
+        updateDrafts(previous => {
           const existing = previous[selected];
           return {
             ...previous,
@@ -80,7 +90,7 @@ export function useConflictResolution({
     return () => {
       cancelled = true;
     };
-  }, [selected, reload, callbacks]);
+  }, [selected, reload, callbacks, updateDrafts]);
   const select = (path: string) => {
     if (!savingRef.current) {
       setSelected(path);
@@ -89,7 +99,7 @@ export function useConflictResolution({
   };
   const change = (content: string) => {
     if (savingRef.current) return;
-    setDrafts(previous =>
+    updateDrafts(previous =>
       previous[selected]
         ? { ...previous, [selected]: { ...previous[selected], content, manual: true } }
         : previous
@@ -97,7 +107,10 @@ export function useConflictResolution({
   };
   const startManual = () => {
     if (draft && !savingRef.current)
-      setDrafts(previous => ({ ...previous, [selected]: { ...draft, manual: true } }));
+      updateDrafts(previous => ({
+        ...previous,
+        [selected]: { ...previous[selected], manual: true },
+      }));
   };
   const resolve = async (choice: ConflictChoice) => {
     if (!draft || loading || savingRef.current) return;
@@ -115,7 +128,7 @@ export function useConflictResolution({
         choice,
         ...(choice === 'manual' ? { content: draft.content } : {}),
       });
-      setDrafts(previous =>
+      updateDrafts(previous =>
         Object.fromEntries(Object.entries(previous).filter(([path]) => path !== selected))
       );
       setSelected(remaining.find(path => path !== selected) ?? '');
@@ -128,7 +141,7 @@ export function useConflictResolution({
   };
   const close = () => {
     if (savingRef.current) return;
-    if (dirty) setDiscarding(true);
+    if (hasDirtyDrafts(currentDrafts.current)) setDiscarding(true);
     else callbacks.current.onClose();
   };
   const discard = () => callbacks.current.onClose();
