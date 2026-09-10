@@ -3,6 +3,23 @@
 Emdeck is a lightweight workspace for editing files and working with terminal
 agents. Keep changes focused, explicit, and inexpensive while idle.
 
+## Choose a starting point
+
+- Found a bug? Use the
+  [bug report](https://github.com/Erdos-Miller/emdeck/issues/new?template=bug.yml).
+- Have a concrete request? Use the
+  [feature form](https://github.com/Erdos-Miller/emdeck/issues/new?template=feature.yml).
+- Want to explore an idea or ask for help? Start in
+  [Discussions](https://github.com/Erdos-Miller/emdeck/discussions).
+- Want a first contribution? Look for
+  [help wanted](https://github.com/Erdos-Miller/emdeck/issues?q=is%3Aopen%20label%3A%22help%20wanted%22)
+  or
+  [good first issue](https://github.com/Erdos-Miller/emdeck/issues?q=is%3Aopen%20label%3A%22good%20first%20issue%22).
+
+Search for existing reports before opening a new one. Discuss substantial
+changes first so maintainers can agree on scope. Follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Development
 
 Install Node.js 22.12 or newer within Node 22, Bun 1.3.6, stable Rust, Git, and
@@ -20,16 +37,34 @@ contributing are documented in this repository.
 
 ## Pull requests
 
-The repository keeps two branches: `main` for reviewed release-ready source and
-`dev` for ongoing development. Maintainers work on `dev` and open a pull request
-from `dev` to `main` for promotion. External contributors work in a fork and
-target `dev`; do not create extra branches in this repository. CI runs on pushes
-to both branches and on incoming pull requests to `dev`.
+The official repository keeps two protected branches: `main` for reviewed
+release-ready source and `dev` for development. Contributors and maintainers
+work in forks and target `dev`; do not create extra branches in the official
+repository or push directly to either protected branch.
+
+1. Fork this repository and start from its current `dev` branch.
+2. Make a focused change on a working branch in your fork. Link the related
+   issue.
+3. Run the checks below and open a pull request targeting
+   `Erdos-Miller/emdeck:dev`.
+4. A maintainer approves external workflows to run after inspecting the changes.
+5. Address feedback and obtain an independent maintainer approval. New commits
+   require fresh approval; all required platform and security checks must pass.
+6. A designated maintainer merges the PR. Being a contributor does not grant
+   repository write access.
+
+Maintainers promote `dev` to `main` through a separate reviewed PR, using a
+**merge commit** to preserve branch ancestry. CI runs on pushes and PRs for both
+branches. See [Governance](GOVERNANCE.md) for maintainers and enforcement.
 
 Explain the problem and resulting behavior, and include a screenshot for visible
 changes. Add behavior tests for new functionality; use isolated test
 repositories and shells. Do not include credentials, private source, agent
 transcripts, or screenshots of real projects.
+
+Agent-assisted contributions are welcome. Review generated code, understand its
+behavior and dependencies, and take responsibility for the final change. Do not
+include a private agent transcript as evidence.
 
 ```sh
 bun run verify
@@ -54,8 +89,6 @@ expected versus actual behavior. Reproduce using a small public or synthetic
 project. Follow [Security policy](SECURITY.md) for private vulnerability
 reports.
 
-Be respectful and constructive. Harassment, discriminatory language, threats,
-and publishing another person's private information are not acceptable.
-Maintainers may edit or remove abusive content and limit participation. Discuss
-technical disagreements with evidence and keep conversations focused on the
-project.
+The [feedback and roadmap guide](docs/ROADMAP.md) explains status labels and how
+requests are prioritized. Maintainers do not promise response times during the
+beta and do not close reports automatically because of age.

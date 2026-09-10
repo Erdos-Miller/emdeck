@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/Erdos-Miller/emdeck/discussions/categories/q-a
+    about: Ask how to use Emdeck or get help with your setup.
+  - name: Ideas and feedback board
+    url: https://github.com/Erdos-Miller/emdeck/discussions/categories/ideas
+    about: Discuss broader ideas and vote on existing proposals.
+  - name: Report a security vulnerability privately
+    url: https://github.com/Erdos-Miller/emdeck/security/advisories/new
+    about: Keep vulnerabilities, credentials, and exploit details out of public issues.
