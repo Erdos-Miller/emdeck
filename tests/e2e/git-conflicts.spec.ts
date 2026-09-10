@@ -38,6 +38,8 @@ test('manual merge edits live inside the modal and all blocks must be resolved b
   const dialog = await openResolver(page);
   await dialog.getByRole('button', { name: 'Merge manually', exact: true }).click();
   const result = dialog.getByRole('region', { name: 'Merged result', exact: true });
+  // The editor is lazy-loaded. Wait until it accepts input before checking its content.
+  await result.getByRole('textbox').click();
   await expect(result.locator('.cm-content')).toContainText('<<<<<<< HEAD');
   await expect(dialog.getByRole('button', { name: 'Save and mark resolved' })).toBeDisabled();
   await page.screenshot({ path: testInfo.outputPath('merge-three-pane.png') });
@@ -57,6 +59,52 @@ test('manual merge edits live inside the modal and all blocks must be resolved b
       content: 'const first = 1;\nconst second = 2;\n',
     },
   ]);
+});
+
+test('merge choices made while the editor loads appear when it becomes ready', async ({ page }) => {
+  const editorChunk = /\/assets\/Editor-[^/]+\.js$/;
+  let releaseEditor = () => {};
+  const editorGate = new Promise<void>(resolve => {
+    releaseEditor = resolve;
+  });
+  await page.route(editorChunk, async route => {
+    await editorGate;
+    await route.continue();
+  });
+  try {
+    await prepareConflicts(page);
+    const dialog = await openResolver(page);
+    const requested = page.waitForRequest(editorChunk);
+    await dialog.getByRole('button', { name: 'Merge manually', exact: true }).click();
+    await requested;
+    const result = dialog.getByRole('region', { name: 'Merged result', exact: true });
+    await expect(result.getByText('Opening merge editor…', { exact: true })).toBeVisible();
+    await expect(result.getByRole('textbox')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Save and mark resolved' })).toBeDisabled();
+    await result.getByRole('button', { name: 'Use ours', exact: true }).click();
+    await result.getByRole('button', { name: 'Use theirs', exact: true }).click();
+
+    releaseEditor();
+    const editor = result.getByRole('textbox');
+    await editor.click();
+    await expect(editor).toHaveText('const first = 1;const second = 2;');
+    await expect(dialog.getByRole('button', { name: 'Save and mark resolved' })).toBeEnabled();
+    await dialog.getByRole('button', { name: 'Save and mark resolved' }).click();
+    await expect(dialog.getByRole('status')).toContainText('1 file remaining');
+    expect(
+      await page.evaluate(() => (window as unknown as Record<string, unknown>).__emdeckResolved)
+    ).toEqual([
+      {
+        path: 'src/config.ts',
+        revision: 'revision-src/config.ts',
+        choice: 'manual',
+        content: 'const first = 1;\nconst second = 2;\n',
+      },
+    ]);
+  } finally {
+    releaseEditor();
+    await page.unrouteAll({ behavior: 'wait' });
+  }
 });
 
 test('manual drafts survive file selection, failed saves, version reloads and cancelled closing', async ({
@@ -157,6 +205,7 @@ test('manual conflict controls remain reachable at the minimum window size and e
   const dialog = await openResolver(page);
   await expect(dialog.getByText(/During a rebase/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Merge manually', exact: true }).click();
+  await dialog.getByRole('region', { name: 'Merged result' }).getByRole('textbox').click();
   await expect(
     dialog.getByRole('region', { name: 'Merged result' }).locator('.cm-content')
   ).toBeVisible();
