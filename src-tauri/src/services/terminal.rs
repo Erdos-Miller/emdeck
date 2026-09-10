@@ -155,20 +155,20 @@ impl Terminals {
         enhanced_usage: bool,
         callback: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
     ) -> Result<String> {
-        let probe = if enhanced_usage && command.trim() == "claude" {
-            Some(crate::services::agent_usage::Probe::new()?)
+        let reporting = enhanced_usage && command.trim() == "claude";
+        let probe = if reporting {
+            crate::services::agent_usage::Probe::reporting()?
         } else {
-            None
+            crate::services::agent_usage::Probe::new()?
         };
-        let launch = match &probe {
-            Some(p) => p.command(shell)?,
-            None => command.into(),
+        let launch = if reporting {
+            probe.command(shell)?
+        } else {
+            command.into()
         };
         let mut command = shell_command(shell, &launch, cwd);
-        if let Some(p) = &probe {
-            command.env("EMDECK_AGENT_DIR", p.directory());
-        }
-        self.spawn_prepared(command, probe, cols, rows, callback)
+        command.env("EMDECK_AGENT_DIR", probe.directory());
+        self.spawn_prepared(command, Some(probe), cols, rows, callback)
     }
 
     pub(crate) fn spawn_prepared(

@@ -165,6 +165,8 @@ export type AgentCommand =
   | {
       op: 'openFile';
       path: string;
+      line?: number;
+      column?: number;
     };
 export type AgentKind = 'claude' | 'codex' | 'gemini' | 'custom' | 'shell';
 export interface LimitWindow {

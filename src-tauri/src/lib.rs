@@ -53,6 +53,7 @@ pub fn run() {
             commands::projects::open_project_window,
             commands::workspace::read_directory,
             commands::workspace::read_file,
+            commands::workspace::find_file,
             commands::workspace::read_image,
             commands::workspace::open_external_url,
             commands::workspace::save_file,

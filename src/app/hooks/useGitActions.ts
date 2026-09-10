@@ -349,8 +349,27 @@ export function useGitActions({
   // Agents address paths from the pane's own directory, which is relative to the root.
   const runAgentCommand = async (command: AgentCommand, cwd: string) => {
     if (command.op === 'openFile') {
-      const relative = command.path.replace(/^\.\//, '');
-      await openFile(cwd ? `${cwd.replace(/\/$/, '')}/${relative}` : relative);
+      let relative = command.path.replace(/^\.\//, '');
+      const target = command.line ? { line: command.line, column: command.column } : undefined;
+      // Compilers and agents print absolute paths, which only resolve inside this project.
+      if (/^(\/|[A-Za-z]:[\\/])/.test(relative)) {
+        const root = project?.root.replace(/[\\/]$/, '') ?? '';
+        if (!root || !relative.startsWith(root))
+          throw new Error(`'${relative}' is outside this project.`);
+        relative = relative.slice(root.length).replace(/^[\\/]+/, '');
+      }
+      // A bare name cannot be resolved by joining, so search the project for it.
+      if (project && !relative.includes('/')) {
+        const matches = await api.find(project.root, relative);
+        if (!matches.length) throw new Error(`No file named '${relative}' in this project.`);
+        if (matches.length > 1) notify(`Opened ${matches[0]} of ${matches.length} matches.`);
+        await openFile(matches[0], undefined, target);
+        return;
+      }
+      const resolved = cwd ? `${cwd.replace(/\/$/, '')}/${relative}` : relative;
+      if (resolved.split('/').some(part => part === '..'))
+        throw new Error(`'${resolved}' points outside the project.`);
+      await openFile(resolved, undefined, target);
       return;
     }
     if (!project || !git) throw new Error('Open a Git project before requesting a diff.');

@@ -20,6 +20,10 @@ pub enum AgentCommand {
     },
     OpenFile {
         path: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        line: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        column: Option<u32>,
     },
 }
 
@@ -29,16 +33,17 @@ fn clean(value: &str) -> Result<String> {
         .filter(|c| !c.is_control())
         .take(MAX_TEXT)
         .collect();
-    if text.trim().is_empty() {
+    let text = text.trim();
+    if text.is_empty() {
         return Err("Agent command needs a non-empty value.".into());
     }
-    Ok(text)
+    Ok(text.to_owned())
 }
 
 // The CLI has no repository context, so bare names pass and the app resolves them.
 fn branch_reference(value: &str) -> Result<String> {
-    let text = clean(value)?;
-    let name = text.trim();
+    let name = clean(value)?;
+    let name = name.as_str();
     if name.starts_with("refs/")
         && !(name.starts_with("refs/heads/") || name.starts_with("refs/remotes/"))
     {
@@ -63,8 +68,11 @@ fn sanitize(command: AgentCommand) -> Result<AgentCommand> {
             reference: branch_reference(&reference)?,
             working,
         },
-        AgentCommand::OpenFile { path } => AgentCommand::OpenFile {
+        AgentCommand::OpenFile { path, line, column } => AgentCommand::OpenFile {
             path: clean(&path)?,
+            // Editors count from one, so zero is a mistake rather than the first line.
+            line: line.filter(|value| *value > 0),
+            column: column.filter(|value| *value > 0),
         },
     })
 }
@@ -98,14 +106,17 @@ pub fn write(path: &Path, input: impl Read) -> Result<AgentCommand> {
         return Err("Agent command too large".into());
     }
     let command = sanitize(serde_json::from_slice(&data).map_err(err)?)?;
-    // Overwriting would drop the earlier command while its writer was told it landed.
-    if path.exists() {
-        return Err("Emdeck is still holding an earlier command.".into());
-    }
     let mut temp = tempfile::NamedTempFile::new_in(path.parent().unwrap()).map_err(err)?;
     temp.write_all(&serde_json::to_vec(&command).map_err(err)?)
         .map_err(err)?;
-    temp.persist(&path).map_err(err)?;
+    // Claiming the name atomically: two writers must not both believe theirs landed.
+    temp.persist_noclobber(&path).map_err(|failure| {
+        if failure.error.kind() == std::io::ErrorKind::AlreadyExists {
+            "Emdeck is still holding an earlier command.".to_owned()
+        } else {
+            err(failure.error)
+        }
+    })?;
     Ok(command)
 }
 
@@ -180,7 +191,9 @@ mod tests {
         assert_eq!(
             round_trip(&probe, br#"{"op":"openFile","path":"src/App.tsx"}"#).unwrap(),
             AgentCommand::OpenFile {
-                path: "src/App.tsx".into()
+                path: "src/App.tsx".into(),
+                line: None,
+                column: None
             }
         );
         assert_eq!(
@@ -190,7 +203,37 @@ mod tests {
             )
             .unwrap(),
             AgentCommand::OpenFile {
-                path: "src/ab.ts".into()
+                path: "src/ab.ts".into(),
+                line: None,
+                column: None
+            }
+        );
+        assert_eq!(
+            round_trip(
+                &probe,
+                br#"{"op":"openFile","path":"a.ts","line":42,"column":7}"#
+            )
+            .unwrap(),
+            AgentCommand::OpenFile {
+                path: "a.ts".into(),
+                line: Some(42),
+                column: Some(7)
+            }
+        );
+        assert_eq!(
+            round_trip(&probe, br#"{"op":"openFile","path":"a.ts","line":0}"#).unwrap(),
+            AgentCommand::OpenFile {
+                path: "a.ts".into(),
+                line: None,
+                column: None
+            }
+        );
+        assert_eq!(
+            round_trip(&probe, br#"{"op":"openFile","path":" src/App.tsx "}"#).unwrap(),
+            AgentCommand::OpenFile {
+                path: "src/App.tsx".into(),
+                line: None,
+                column: None
             }
         );
         assert!(round_trip(&probe, br#"{"op":"openFile","path":"  "}"#).is_err());
@@ -215,7 +258,9 @@ mod tests {
         assert_eq!(
             take(probe.directory()),
             Some(AgentCommand::OpenFile {
-                path: "first.ts".into()
+                path: "first.ts".into(),
+                line: None,
+                column: None
             })
         );
         write(
@@ -277,7 +322,9 @@ mod tests {
         assert_eq!(
             take(probe.directory()),
             Some(AgentCommand::OpenFile {
-                path: "a.ts".into()
+                path: "a.ts".into(),
+                line: None,
+                column: None
             })
         );
         assert!(write(&probe.directory().join("usage.json"), b"{}".as_slice()).is_err());
@@ -295,7 +342,9 @@ mod tests {
             assert_eq!(
                 take(probe.directory()),
                 Some(AgentCommand::OpenFile {
-                    path: "a.ts".into()
+                    path: "a.ts".into(),
+                    line: None,
+                    column: None
                 })
             );
             assert_eq!(take(probe.directory()), None);

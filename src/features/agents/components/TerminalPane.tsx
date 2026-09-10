@@ -4,6 +4,7 @@ import '@xterm/xterm/css/xterm.css';
 import { Copy, Maximize2, Minimize2, RotateCcw, TerminalSquare, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { call, native, spawnTerminal } from '../../../platform/desktop/api';
+import { findPaths, linkRange } from '../services/terminalLinks';
 import type {
   AgentCommand,
   AgentObservation,
@@ -95,6 +96,34 @@ export default function TerminalPane({
       cancel: id => cancelAnimationFrame(id),
     });
     fitRef.current = fitter;
+    // Remote output names remote files; a local search would open the wrong one.
+    if (!pane.remote)
+      term.registerLinkProvider({
+        provideLinks(row, callback) {
+          const buffer = term.buffer.active;
+          let first = row;
+          while (first > 1 && buffer.getLine(first - 1)?.isWrapped) first--;
+          // Untrimmed rows keep every row exactly one width wide, so offsets stay divisible.
+          let text = buffer.getLine(first - 1)?.translateToString(false) ?? '';
+          for (let next = first + 1; buffer.getLine(next - 1)?.isWrapped; next++)
+            text += buffer.getLine(next - 1)?.translateToString(false) ?? '';
+          callback(
+            findPaths(text).map(match => ({
+              range: linkRange(match, first, term.cols),
+              text: text.slice(match.start, match.end),
+              activate: (event: MouseEvent) => {
+                if (!event.ctrlKey && !event.metaKey) return;
+                callbacks.current.onCommand(pane.id, {
+                  op: 'openFile',
+                  path: match.path,
+                  line: match.line,
+                  column: match.column,
+                });
+              },
+            }))
+          );
+        },
+      });
     const element = host.current;
     element.addEventListener('wheel', fitter.cancel, { capture: true, passive: true });
     element.addEventListener('pointerdown', fitter.cancel, true);
