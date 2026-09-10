@@ -12,8 +12,13 @@ use std::{
 };
 use tauri::ipc::Channel;
 
+mod attachments;
+
 #[cfg(test)]
 mod stress;
+
+#[cfg(test)]
+mod color_tests;
 
 #[cfg(all(test, windows))]
 mod environment_tests;
@@ -38,6 +43,8 @@ pub struct Session {
     master: Box<dyn MasterPty + Send>,
     writer: Box<dyn Write + Send>,
     killer: Box<dyn ChildKiller + Send + Sync>,
+    program: String,
+    attachments: attachments::Attachments,
 }
 #[derive(Default)]
 pub struct Terminals {
@@ -91,9 +98,7 @@ pub(crate) fn program_command(program: impl AsRef<std::ffi::OsStr>, cwd: &Path) 
         cmd.env(key, value);
     }
     cmd.cwd(cwd);
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
-    cmd.env("TERM_PROGRAM", "Emdeck");
+    emdeck_session::configure_terminal_environment(&mut cmd);
     cmd
 }
 
@@ -196,6 +201,7 @@ impl Terminals {
                 pixel_height: 0,
             })
             .map_err(err)?;
+        let program = command.get_argv()[0].to_string_lossy().into_owned();
         let mut child = pair.slave.spawn_command(command).map_err(err)?;
         drop(pair.slave);
         let killer = emdeck_session::child_killer(&*child).inspect_err(|_| {
@@ -210,6 +216,8 @@ impl Terminals {
                 master: pair.master,
                 writer,
                 killer,
+                program,
+                attachments: attachments::Attachments::default(),
             },
         );
         let map = self.sessions.clone();
@@ -277,6 +285,17 @@ impl Terminals {
         let session = sessions.get_mut(id).ok_or("Terminal has exited.")?;
         session.writer.write_all(data.as_bytes()).map_err(err)?;
         session.writer.flush().map_err(err)
+    }
+    pub fn attachment(&self, id: &str, name: &str, data: &[u8]) -> Result<String> {
+        let mut sessions = self.sessions.lock().map_err(err)?;
+        let session = sessions.get_mut(id).ok_or("Terminal has exited.")?;
+        let path = session.attachments.save(name, data)?;
+        attachments::paths_input(&session.program, &[path])
+    }
+    pub fn path_input(&self, id: &str, paths: &[String]) -> Result<String> {
+        let sessions = self.sessions.lock().map_err(err)?;
+        let session = sessions.get(id).ok_or("Terminal has exited.")?;
+        attachments::paths_input(&session.program, paths)
     }
     pub fn resize(&self, id: &str, cols: u16, rows: u16) -> Result<()> {
         let sessions = self.sessions.lock().map_err(err)?;

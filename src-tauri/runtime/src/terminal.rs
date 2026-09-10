@@ -98,6 +98,7 @@ impl Terminal {
         *self.master.lock().map_err(error)? = Some(pair.master);
         self.live.lock().map_err(error)?.info.running = true;
         let output = self.clone();
+        let output_changed = changed.clone();
         let reading = std::thread::spawn(move || {
             let mut buffer = [0u8; 8192];
             while let Ok(count) = reader.read(&mut buffer) {
@@ -107,6 +108,13 @@ impl Terminal {
                 let mut live = output.live.lock().unwrap_or_else(|e| e.into_inner());
                 live.parser.process(&buffer[..count]);
                 let replies = std::mem::take(&mut live.parser.callbacks_mut().bytes);
+                let title = live.parser.callbacks_mut().title.take();
+                let title_changed = title
+                    .as_ref()
+                    .is_some_and(|title| live.info.title.as_ref() != Some(title));
+                if let Some(title) = title {
+                    live.info.title = Some(title);
+                }
                 live.sequence += 1;
                 let sequence = live.sequence;
                 live.chunks.push_back((sequence, buffer[..count].to_vec()));
@@ -119,6 +127,9 @@ impl Terminal {
                 live.dirty = true;
                 drop(live);
                 output.changed.notify_all();
+                if title_changed {
+                    output_changed(false);
+                }
                 if !replies.is_empty() {
                     let _ = output.write_raw(&replies);
                 }
@@ -360,9 +371,7 @@ pub fn command(info: &PaneInfo, home: &Path, resume: bool) -> Result<CommandBuil
         command.env(key, value);
     }
     command.cwd(&launch.cwd);
-    command.env("TERM", "xterm-256color");
-    command.env("COLORTERM", "truecolor");
-    command.env("TERM_PROGRAM", "Emdeck");
+    crate::configure_terminal_environment(&mut command);
     command.env("EMDECK_SESSION_HOME", home);
     if let Ok(exe) = std::env::current_exe() {
         command.env("EMDECK_CLI_EXE", exe);

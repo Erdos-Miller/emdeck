@@ -1,3 +1,4 @@
+import { paneName } from '../services/terminal-title';
 import { Crosshair, Pencil, RotateCcw, X } from 'lucide-react';
 import type {
   AgentObservation,
@@ -48,11 +49,15 @@ export default function AgentCard({
     <article
       key={pane.id}
       className={`agent-card ${selected ? 'selected' : ''} ${status.tone}`}
-      aria-label={`${pane.name} agent`}
+      aria-label={`${paneName(pane)} agent`}
     >
-      <button className='agent-card-title' onClick={handleFocusClick} title={`Focus ${pane.name}`}>
+      <button
+        className='agent-card-title'
+        onClick={handleFocusClick}
+        title={`Focus ${paneName(pane)}`}
+      >
         <i style={{ background: pane.color }} />
-        <strong>{pane.name}</strong>
+        <strong>{paneName(pane)}</strong>
         <small>{pane.remote?.target.backend ?? (kind === 'custom' ? 'command' : kind)}</small>
       </button>
       <p className='agent-cwd' title={pane.cwd || 'Project root'}>
@@ -100,7 +105,11 @@ export default function AgentCard({
                 <strong>{percent == null ? 'Not reported' : `${percent.toFixed(0)}% used`}</strong>
               </div>
               {percent != null && (
-                <progress aria-label={`${pane.name} context usage`} value={percent} max={100} />
+                <progress
+                  aria-label={`${paneName(pane)} context usage`}
+                  value={percent}
+                  max={100}
+                />
               )}
             </div>
           );
@@ -170,18 +179,22 @@ export default function AgentCard({
       <div className='agent-card-actions'>
         <button
           className='icon-button'
-          title={`Focus only ${pane.name}`}
+          title={`Focus only ${paneName(pane)}`}
           onClick={handleFocusClick2}
         >
           <Crosshair size={13} />
         </button>
-        <button className='icon-button' title={`Rename ${pane.name}`} onClick={handleRenameClick}>
+        <button
+          className='icon-button'
+          title={`Rename ${paneName(pane)}`}
+          onClick={handleRenameClick}
+        >
           <Pencil size={12} />
         </button>
         {['exited', 'error', 'preview'].includes(state ?? '') && (
           <button
             className='icon-button'
-            title={`Restart ${pane.name}`}
+            title={`Restart ${paneName(pane)}`}
             onClick={handleRestartClick}
           >
             <RotateCcw size={12} />
@@ -190,7 +203,7 @@ export default function AgentCard({
         <span className='spacer' />
         <button
           className='icon-button'
-          title={`Close session ${pane.name}`}
+          title={`Close session ${paneName(pane)}`}
           onClick={handleCloseClick}
         >
           <X size={13} />

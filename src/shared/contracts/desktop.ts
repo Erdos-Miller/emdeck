@@ -65,6 +65,8 @@ export interface DesktopCommands {
     string
   >;
   terminal_write: Command<{ id: string; data: string }, void>;
+  terminal_attachment: Command<{ id: string; name: string; data: number[] }, string>;
+  terminal_path_input: Command<{ id: string; paths: string[] }, string>;
   terminal_connect_remote: Command<
     Repository & { target: SshTarget; cols: number; rows: number; onEvent: unknown },
     string

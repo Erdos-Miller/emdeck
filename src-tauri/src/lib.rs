@@ -75,6 +75,8 @@ pub fn run() {
             commands::terminal::terminal_spawn,
             commands::terminal::terminal_connect_remote,
             commands::terminal::terminal_write,
+            commands::terminal::terminal_attachment,
+            commands::terminal::terminal_path_input,
             commands::terminal::terminal_resize,
             commands::terminal::terminal_close,
             commands::usage::codex_account_usage

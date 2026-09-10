@@ -18,6 +18,7 @@ export interface SessionLaunch {
 export interface SessionPane {
   id: string;
   generation: string;
+  title?: string | null;
   launch: SessionLaunch;
   running: boolean;
   restored: boolean;

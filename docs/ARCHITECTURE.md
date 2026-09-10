@@ -100,6 +100,43 @@ Appearance updates reconfigure the existing terminal. Hidden and maximized panes
 remain mounted. CodeMirror samples a document on tab switches and separately
 applies content/theme updates, preserving per-file undo history.
 
+Desktop terminals observe xterm's OSC title events and publish bounded plain
+text metadata without changing pane identity or launch inputs. The agents
+service selects a manual name, reported title or launch label, in that order.
+The session server captures the same title sequences through its VT parser and
+includes optional title metadata in snapshots and reads, including for detached
+clients. Title changes notify snapshot listeners without triggering disk writes.
+New process generations clear the previous title; older stored sessions without
+the field remain compatible.
+
+Terminal attachment listeners share the xterm lifetime. Native drop coordinates
+select the visible pane under the pointer; browser clipboard/file events feed a
+serialized, bounded staging queue. Native commands authorize the invoking
+window's live PTY before storing bytes or quoting paths for its launch shell.
+Each PTY owns a private temporary attachment directory, removed with the
+process. Paths are inserted through xterm's paste API without a newline. Pending
+uploads cannot write into a closed or restarted pane. Remote and background
+views show an explicit unsupported-transfer message and leave text input and
+leases intact.
+
+Both terminal views use one keyboard adapter owned by the xterm instance. A pure
+service selects shortcut ownership. Paste gestures bypass xterm's control
+character translation without canceling the webview's native ClipboardEvent,
+preserving text, images and file handling. Shift+Enter sends the CSI-u modified
+Enter sequence through the existing input stream; it never sends an extra submit
+or bypasses background input leases. IME composition and other agent keys retain
+xterm handling. Clipboard fixture tests never access the user's system
+clipboard.
+
+New desktop and background PTYs share their terminal environment policy in the
+session runtime. They advertise `xterm-256color` and true color and clear
+inherited `NO_COLOR`, `FORCE_COLOR`, `CLICOLOR`, `CLICOLOR_FORCE` and
+`NODE_DISABLE_COLORS` overrides, so a launcher configured for plain logs does
+not disable colors inside the IDE. Other environment variables, including
+launch-time PATH, remain inherited. Users can still opt out of colors explicitly
+in a shell profile or custom launch command. This applies when a process starts;
+changing the IDE does not alter running terminal sessions.
+
 Run discovery reads only the root listing and `package.json`. Its injected IO
 port makes cancellation and read limits testable without launching an app.
 Document reconciliation uses the current buffer when a read completes, keeping
@@ -144,6 +181,12 @@ last. Shared scrollbar styles belong in `styles/scrollbars.css`: containers use
 Keep gutter dimensions unchanged on hover so editors and terminals do not
 resize. Vertically centered scroll content must fall back to start alignment
 when it overflows, keeping both ends reachable at small pane sizes.
+
+The terminal launch menu is portaled to the document body to escape panel
+containment and toolbar stacking. Its pure placement helper selects above or
+below the trigger and clamps width and scrollable height to the visible
+viewport. Resize/scroll observers exist only while the menu is open; positioning
+updates its DOM styles without rerendering terminal sessions.
 
 Linting, type checks, architecture checks and React Doctor are development
 tools; none run inside the shipped IDE or analyze projects opened by its users.

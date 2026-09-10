@@ -1,5 +1,45 @@
 # React audit — 0.1.19
 
+## Unreleased — terminal keyboard input
+
+React Doctor 0.9.13 still reports four reviewed Worktrees errors and 62 advisory
+warnings, with no new rule/file findings. Both terminal views install the same
+keyboard adapter without adding render state or changing session identity.
+Browser regressions cover paste event ownership, multiline bracketed paste,
+clipboard images, modified Enter and background input leases. No rules were
+suppressed or size budgets changed.
+
+## Unreleased — terminal attachments
+
+React Doctor 0.9.13 reports four reviewed Worktrees errors and 62 advisory
+warnings. The new `async-await-in-loop` advisory in `terminalAttachments.ts` is
+intentional: files are staged sequentially to bound memory and preserve input
+order, with per-file, batch and terminal limits. Attachment listeners are
+cleaned up with the terminal and reject late results after disposal. No rules
+were suppressed or size limits changed.
+
+## Unreleased — terminal session titles
+
+React Doctor 0.9.13 reports four previously reviewed Worktrees errors and 61
+advisory warnings, unchanged from the terminal menu audit. No new rule/file
+findings were introduced. The existing TerminalPane complexity advisory remains
+within the mandatory size budget. Title events update pane metadata through a
+stable callback, without becoming dependencies of the PTY lifetime effect.
+Browser tests cover automatic updates, manual overrides, session preservation,
+search, long titles, restart and background session metadata. No rules were
+suppressed or size budgets changed.
+
+## Unreleased — adaptive terminal launch menu
+
+React Doctor 0.9.13 reports the same four reviewed Worktrees false positives and
+61 advisory warnings, down from 63. No diagnostic targets the extracted launch
+menu or its pure placement helper. The existing TerminalPanel complexity
+advisory remains. Menu positioning is isolated DOM layout work with observers
+scoped to the open menu; it does not update React state or recreate terminals.
+Browser tests cover both opening directions, scrolling and keyboard access in
+short windows, live resizing, dismissal, launching and terminal preservation. No
+rules were suppressed or size limits changed.
+
 ## Unreleased — conflict resolution modal
 
 The immediate-close fix was audited again with the same pinned command: four

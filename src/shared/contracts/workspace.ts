@@ -116,6 +116,8 @@ export type PaneState = 'starting' | 'running' | 'output' | 'exited' | 'error' |
 export interface Pane {
   id: string;
   name: string;
+  title?: string;
+  customName?: string;
   command: string;
   cwd: string;
   shell: string;
