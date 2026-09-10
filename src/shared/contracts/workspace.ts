@@ -151,6 +151,20 @@ export type TerminalEvent =
   | {
       type: 'usage';
       usage: AgentUsage;
+    }
+  | {
+      type: 'command';
+      command: AgentCommand;
+    };
+export type AgentCommand =
+  | {
+      op: 'showDiff';
+      reference: string;
+      working: boolean;
+    }
+  | {
+      op: 'openFile';
+      path: string;
     };
 export type AgentKind = 'claude' | 'codex' | 'gemini' | 'custom' | 'shell';
 export interface LimitWindow {

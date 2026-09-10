@@ -30,6 +30,9 @@ pub enum TerminalEvent {
     Usage {
         usage: crate::services::agent_usage::Usage,
     },
+    Command {
+        command: crate::services::agent_command::AgentCommand,
+    },
 }
 pub struct Session {
     master: Box<dyn MasterPty + Send>,
@@ -161,13 +164,11 @@ impl Terminals {
             Some(p) => p.command(shell)?,
             None => command.into(),
         };
-        self.spawn_prepared(
-            shell_command(shell, &launch, cwd),
-            probe,
-            cols,
-            rows,
-            callback,
-        )
+        let mut command = shell_command(shell, &launch, cwd);
+        if let Some(p) = &probe {
+            command.env("EMDECK_AGENT_DIR", p.directory());
+        }
+        self.spawn_prepared(command, probe, cols, rows, callback)
     }
 
     pub(crate) fn spawn_prepared(
@@ -228,6 +229,14 @@ impl Terminals {
                 }) {
                     break;
                 }
+                if let Some(command) = probe
+                    .as_ref()
+                    .and_then(|p| crate::services::agent_command::take(p.directory()))
+                {
+                    if !output_callback(TerminalEvent::Command { command }) {
+                        break;
+                    }
+                }
                 // The reporter writes before printing its status line. Inspect the
                 // timestamp on output so a short final burst cannot be throttled away.
                 if let Some(usage) = probe
@@ -241,6 +250,14 @@ impl Terminals {
                         }
                     }
                 }
+            }
+            // A command written just before exit is only on disk; the probe directory
+            // is deleted with the pane, so claim it here or it is lost unread.
+            if let Some(command) = probe
+                .as_ref()
+                .and_then(|p| crate::services::agent_command::take(p.directory()))
+            {
+                let _ = output_callback(TerminalEvent::Command { command });
             }
             if let Some(usage) = probe.as_ref().and_then(|p| p.read()) {
                 let _ = output_callback(TerminalEvent::Usage { usage });
@@ -370,7 +387,9 @@ mod tests {
                     assert_eq!(code, Some(0));
                     break;
                 }
-                TerminalEvent::Usage { .. } => panic!("Plain shells must not create usage probes"),
+                TerminalEvent::Usage { .. } | TerminalEvent::Command { .. } => {
+                    panic!("Plain shells must not create agent probes")
+                }
             }
         }
         assert!(String::from_utf8_lossy(&output).contains("emdeck-pty-ok"));

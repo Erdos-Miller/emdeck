@@ -122,6 +122,9 @@ impl Probe {
             shell_quote(&file, powershell)
         ))
     }
+    pub fn directory(&self) -> &Path {
+        self.directory.path()
+    }
     pub fn read(&self) -> Option<Usage> {
         let path = self.directory.path().join("usage.json");
         if fs::metadata(&path).ok()?.len() > 16_384 {

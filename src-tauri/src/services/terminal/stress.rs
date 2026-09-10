@@ -47,8 +47,8 @@ fn six_terminals_stream_resize_and_shutdown() {
                 TerminalEvent::Exit { code } => {
                     panic!("Terminal {index} exited during soak: {code:?}")
                 }
-                TerminalEvent::Usage { .. } => {
-                    panic!("Synthetic shells must not create usage probes")
+                TerminalEvent::Usage { .. } | TerminalEvent::Command { .. } => {
+                    panic!("Synthetic shells must not create agent probes")
                 }
             }
         }

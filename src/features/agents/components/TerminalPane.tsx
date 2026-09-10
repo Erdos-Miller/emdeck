@@ -5,6 +5,7 @@ import { Copy, Maximize2, Minimize2, RotateCcw, TerminalSquare, X } from 'lucide
 import { useEffect, useRef, useState } from 'react';
 import { call, native, spawnTerminal } from '../../../platform/desktop/api';
 import type {
+  AgentCommand,
   AgentObservation,
   AgentUsage,
   Pane,
@@ -27,6 +28,7 @@ interface Props {
   onError: (error: unknown) => void;
   onObservation: (id: string, observation: AgentObservation | null) => void;
   onUsage: (id: string, usage: AgentUsage | null) => void;
+  onCommand: (id: string, command: AgentCommand) => void;
   enhancedUsage: boolean;
   focusRequest: number;
   selected: boolean;
@@ -44,6 +46,7 @@ export default function TerminalPane({
   onError,
   onObservation,
   onUsage,
+  onCommand,
   enhancedUsage,
   focusRequest,
   selected,
@@ -57,7 +60,7 @@ export default function TerminalPane({
     fitRef = useRef<ReturnType<typeof createTerminalFitter> | null>(null);
   const [state, setState] = useState<PaneState>(native ? 'starting' : 'preview');
   const [observation, setObservation] = useState<AgentObservation | undefined>();
-  const callbacks = useLatest({ onState, onError, onObservation, onUsage });
+  const callbacks = useLatest({ onState, onError, onObservation, onUsage, onCommand });
 
   // Launch inputs are sampled only when the session identity changes. Appearance
   // updates and pane renames must never terminate a running agent.
@@ -176,6 +179,8 @@ export default function TerminalPane({
               }, 1400);
             } else if (event.type === 'usage') {
               callbacks.current.onUsage(pane.id, event.usage);
+            } else if (event.type === 'command') {
+              callbacks.current.onCommand(pane.id, event.command);
             } else {
               ended = true;
               nativeId.current = null;

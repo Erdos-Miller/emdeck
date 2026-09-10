@@ -1,7 +1,7 @@
 mod commands;
 mod services;
 mod state;
-use services::{agent_usage, codex_usage, terminal};
+use services::{agent_command, agent_usage, codex_usage, terminal};
 use state::Projects;
 use tauri::Manager;
 
@@ -13,7 +13,7 @@ pub fn run() {
         }
         return;
     }
-    if agent_usage::report_cli() {
+    if agent_usage::report_cli() || agent_command::command_cli() {
         return;
     }
     tauri::Builder::default()
