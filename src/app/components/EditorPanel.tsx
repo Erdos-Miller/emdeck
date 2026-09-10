@@ -32,6 +32,7 @@ type Props = {
     | 'reloadFile'
     | 'project'
     | 'activeConflicts'
+    | 'showConflicts'
     | 'changeFile'
     | 'openFile'
     | 'settings'

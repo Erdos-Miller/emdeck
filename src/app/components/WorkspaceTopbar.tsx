@@ -29,6 +29,7 @@ type Props = {
     | 'branchAction'
     | 'createBranch'
     | 'showWorktrees'
+    | 'showConflicts'
     | 'setPalette'
     | 'setPaletteQuery'
     | 'runsOpen'
@@ -56,6 +57,7 @@ export default function WorkspaceTopbar({ model }: Props) {
   const handleAction: React.ComponentProps<typeof BranchPicker>['onAction'] = (action, branch) =>
     void branchAction(action, branch);
   const handleCreate = () => void createBranch();
+  const handleResolve = () => showConflicts();
   const handlePaletteClick = () => {
     setPalette(true);
     setPaletteQuery('');
@@ -86,6 +88,7 @@ export default function WorkspaceTopbar({ model }: Props) {
     branchAction,
     createBranch,
     showWorktrees,
+    showConflicts,
     setPalette,
     setPaletteQuery,
     runsOpen,
@@ -137,6 +140,7 @@ export default function WorkspaceTopbar({ model }: Props) {
                 onAction={handleAction}
                 onCreate={handleCreate}
                 onWorktrees={showWorktrees}
+                onResolve={handleResolve}
               />
             </>
           )}

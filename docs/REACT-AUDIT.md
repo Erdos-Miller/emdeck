@@ -1,5 +1,17 @@
 # React audit — 0.1.19
 
+## Unreleased — conflict resolution modal
+
+React Doctor 0.9.13 reports the same four reviewed Worktrees false positives and
+63 advisory warnings. The new merge UI was split into the file dialog,
+version/result panes, footer and a hook with an injected IO port. Duplicate path
+filtering was removed. The remaining two new advisories concern the dialog's
+conditional actions and selection reconciliation after Git refreshes. Selection
+changes are deferred while saving or holding an unsaved draft; native index and
+file revisions still guard every write. Browser tests cover draft retention,
+error recovery, nested close dialogs and small windows. No audit rule was
+suppressed or size budget increased.
+
 ## Unreleased — background session server
 
 React Doctor 0.9.13 reports four previously reviewed Worktrees false positives

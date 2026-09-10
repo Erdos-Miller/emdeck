@@ -105,6 +105,22 @@ port makes cancellation and read limits testable without launching an app.
 Document reconciliation uses the current buffer when a read completes, keeping
 edits made while IO was pending. Git remains explicit or focus-triggered.
 
+The merge dialog loads only the selected conflicted file. Native `git_conflicts`
+reads Git's unmerged index stages and validates the index, HEAD and working-file
+revision before applying a choice. Accepting a complete side handles binary
+files and deletions; a manual result must be UTF-8 text without remaining
+conflict markers. Applying a result stages that path without committing or
+continuing the operation. Git mutations share the repository operation guard.
+Oversized files, symlinks and submodules report an explicit terminal fallback
+instead of attempting text conversion.
+
+The Git feature receives a typed conflict IO port and an editor render slot.
+`WorkspaceConflicts` composes the CodeMirror editor without sibling feature
+imports. Manual drafts survive file selection and failed saves, and participate
+in the native window's unsaved-edit check. Open editor buffers are checked
+before reading and applying a resolution; unsaved tabs must be saved or closed.
+Shared modal keyboard handling belongs only to the topmost dialog.
+
 The optional terminal workspace rail filters the existing pane tree; its xterm
 instances retain stable parents and keys. Saved remote profiles and view
 preferences are explicit UI state. Pure connection validation and space grouping
@@ -118,7 +134,13 @@ external-URL command. See [Remote sessions](REMOTE-SESSIONS.md) for capabilities
 and boundaries.
 
 Style imports retain their original cascade order. Responsive overrides load
-last. Linting, type checks, architecture checks and React Doctor are development
+last. Shared scrollbar styles belong in `styles/scrollbars.css`: containers use
+`overflow: auto`, and thumbs are transparent until that container is hovered.
+Keep gutter dimensions unchanged on hover so editors and terminals do not
+resize. Vertically centered scroll content must fall back to start alignment
+when it overflows, keeping both ends reachable at small pane sizes.
+
+Linting, type checks, architecture checks and React Doctor are development
 tools; none run inside the shipped IDE or analyze projects opened by its users.
 
 ## Validation commands

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Resolve conflicts in a file-list modal with complete Ours/Theirs choices and a
+  three-pane manual merge editor. Results are staged per file, with draft
+  preservation, stale-version checks, binary/deletion handling and explicit
+  rebase labels. See [merge conflict resolution](docs/MERGE-CONFLICTS.md).
+- Keep the Welcome page fully scrollable in short panes and show shared
+  scrollbars only while hovering containers with overflowing content.
+
 - Use `main` for reviewed source and `dev` for ongoing development; validate
   both branches and keep routine dependency updates on `dev`.
 - Allow the Bun shell integration test to use its existing 15-second child

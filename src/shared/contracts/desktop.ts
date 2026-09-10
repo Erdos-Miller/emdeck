@@ -11,6 +11,7 @@ import type {
 } from './workspace';
 import type { SshTarget } from './remote';
 import type { MachineTarget, SessionAction } from './sessions';
+import type { ConflictResolution, GitConflict } from './gitConflicts';
 
 type Command<Args, Result> = { args: Args; result: Result };
 type FileLocation = { root: string; path: string };
@@ -35,6 +36,8 @@ export interface DesktopCommands {
   reveal_entry: Command<FileLocation, void>;
   open_external_url: Command<{ url: string }, void>;
   git_snapshot: Command<Repository, GitSnapshot>;
+  git_conflict: Command<FileLocation, GitConflict>;
+  git_resolve_conflict: Command<Repository & { request: ConflictResolution }, void>;
   git_action: Command<
     Repository & { action: string; value: string; original: string | null },
     string
