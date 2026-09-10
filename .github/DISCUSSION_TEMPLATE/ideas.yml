@@ -1,0 +1,24 @@
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: Search existing ideas and add your vote before opening a duplicate. Describe the workflow you want to improve; concrete implementation requests can become linked issues after discussion.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to improve?
+      description: Tell us what you are trying to do and what gets in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: Describe the experience you would like, and any alternatives you tried.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references
+      description: Optional. Use public links, synthetic examples, and sanitized screenshots.
