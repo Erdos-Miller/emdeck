@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/desktop';
+import { installTerminalClipboard } from './fixtures/terminal-clipboard';
 import type { SessionAction, SessionSnapshot } from '../../src/shared/contracts/sessions';
 
 test('background view attaches existing agents, preserves terminals and separates detach from stop', async ({
@@ -10,6 +11,7 @@ test('background view attaches existing agents, preserves terminals and separate
         invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
       };
       __sessionActions: SessionAction[];
+      __sessionTitle: (title: string) => void;
     };
     state.__sessionActions = [];
     const original = state.__TAURI_INTERNALS__.invoke;
@@ -22,6 +24,7 @@ test('background view attaches existing agents, preserves terminals and separate
         {
           id: 'agent',
           generation: 'generation',
+          title: 'Fix remote login',
           launch: {
             workspaceId: 'workspace',
             name: 'Detached Claude',
@@ -45,6 +48,10 @@ test('background view attaches existing agents, preserves terminals and separate
           },
         },
       ],
+    };
+    state.__sessionTitle = title => {
+      snapshot.panes[0].title = title;
+      snapshot.revision++;
     };
     state.__TAURI_INTERNALS__.invoke = async (command, args = {}) => {
       if (command === 'session_connect') return 'connection';
@@ -85,12 +92,29 @@ test('background view attaches existing agents, preserves terminals and separate
   await page.getByRole('button', { name: 'Connect local server', exact: true }).click();
   const rail = page.getByRole('complementary', { name: 'Background machines and agents' });
   await expect(rail).toContainText('Permission request');
-  await rail.getByRole('button', { name: /Detached Claude/ }).click();
-  const terminal = page.getByRole('region', { name: 'Detached Claude persistent terminal' });
+  await rail.getByRole('button', { name: /Fix remote login/ }).click();
+  const terminal = page.locator('.session-terminal');
+  await expect(terminal).toHaveAccessibleName('Fix remote login persistent terminal');
   await expect(terminal).toContainText('DETACHED SESSION RETAINED');
+  await terminal.locator('.xterm-helper-textarea').evaluate(element => {
+    const clipboardData = new DataTransfer();
+    clipboardData.items.add(new File(['fixture image'], 'test.png', { type: 'image/png' }));
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true })
+    );
+  });
+  await expect(terminal.getByRole('alert')).toContainText('file path on the session machine');
+  await terminal.getByRole('button', { name: 'Dismiss', exact: true }).click();
   await terminal
     .locator('.xterm')
     .evaluate(el => el.setAttribute('data-session-test', 'preserved'));
+  await page.evaluate(() =>
+    (window as unknown as { __sessionTitle: (title: string) => void }).__sessionTitle(
+      'Detached Claude'
+    )
+  );
+  await expect(terminal).toHaveAccessibleName('Detached Claude persistent terminal');
+  await expect(rail).toContainText('Detached Claude');
   await page.getByLabel('Terminal view').selectOption('panes');
   await page.getByLabel('Terminal view').selectOption('server');
   await expect(page.locator('[data-session-test="preserved"]')).toBeVisible();
@@ -101,6 +125,14 @@ test('background view attaches existing agents, preserves terminals and separate
       (await actions()).flatMap(a => (a.method === 'pane.input' ? [a.params.text] : [])).join('')
     )
     .toBe('explicit input');
+  await installTerminalClipboard(terminal.locator('.xterm-helper-textarea'));
+  await page.keyboard.press('Control+v');
+  await page.keyboard.press('Shift+Enter');
+  await expect
+    .poll(async () =>
+      (await actions()).flatMap(a => (a.method === 'pane.input' ? [a.params.text] : [])).slice(-2)
+    )
+    .toEqual(['first line\rsecond line', '\x1b[13;2u']);
   expect((await actions()).filter(a => a.method === 'pane.create')).toHaveLength(0);
   await terminal.getByTitle('Detach view; keep process running').click();
   await expect(terminal).toHaveCount(0);

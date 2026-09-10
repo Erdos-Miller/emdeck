@@ -67,6 +67,35 @@ Terminals use CLIs you have already installed and authenticated. Emdeck does not
 bundle agents or require its own AI account. Run configurations execute through
 the configured shell and are never launched merely by opening a project.
 
+New terminals, including the Claude/Codex presets and background sessions, use
+their own color support even when the program that launched Emdeck disables
+colored logs. To disable colors intentionally, set `NO_COLOR` in your shell
+profile or custom command. After updating Emdeck, restart the app before opening
+new panes; existing terminals keep the environment they started with. Background
+sessions require the updated session server to launch new panes.
+
+Local terminal panes accept files dragged from the system file manager and
+images or files pasted from the clipboard. Drops insert quoted file paths;
+clipboard file data is stored in a private temporary directory and its path is
+inserted without pressing Enter. Those temporary files are removed when the
+terminal ends. Clipboard attachments are limited to 10 MiB per file, 20 MiB per
+paste, and 100 MiB per terminal. Plain-text paste continues to work normally.
+File transfer to SSH, WSL and background sessions is not implemented; use a path
+on the session machine in those views. An explicit message appears if a file is
+dropped or pasted there.
+
+With the terminal focused, use **Ctrl+V** on Windows/Linux or **Cmd+V** on macOS
+to paste; **Ctrl+Shift+V** is also supported. Keyboard and context-menu paste
+use the same clipboard events, including images/files. Text uses bracketed paste
+when the running program enables it.
+
+**Shift+Enter** sends a distinct modified Enter key for multiline agent prompts;
+plain **Enter** keeps its normal submit behavior. The running CLI or shell
+decides how to handle that modified key. In Claude Code, **Ctrl+J** is also a
+newline shortcut with no terminal setup; see its
+[terminal configuration guide](https://code.claude.com/docs/en/terminal-config).
+**Alt+Enter** and **Ctrl+C** continue to reach the running program unchanged.
+
 ## Agent overview and usage
 
 The terminal toolbar also offers an optional **Workspaces** view: spaces grouped
@@ -81,6 +110,13 @@ overview beside the terminals. Filter by provider or attention, sort by
 name/launch order/attention, focus a pane, maximize it, rename it, close it, or
 restart an exited session. Focusing, filtering, renaming, hiding the overview,
 and changing details preserve running terminals.
+
+Pane headers, agent cards and workspace tabs follow titles reported by the
+terminal, such as Claude's current task name. A custom launch name or a name set
+with **Rename session** takes priority. Clear the name in that dialog to return
+to automatic titles. If the program reports no title, Emdeck shows the original
+launch label. Background sessions report titles through the updated session
+server, including while detached.
 
 Use **Customize agent overview** to show/hide and reorder activity, model,
 context, input/output tokens, estimated session cost, account limits, and
@@ -331,18 +367,20 @@ the terminal itself.
 
 ## Keyboard shortcuts
 
-| Action                          | Shortcut                |
-| ------------------------------- | ----------------------- |
-| Open project                    | Ctrl/Cmd+O              |
-| Open project in new window      | Ctrl/Cmd+Shift+O        |
-| Quick open loaded files/actions | Ctrl/Cmd+P              |
-| Save / close file               | Ctrl/Cmd+S / Ctrl/Cmd+W |
-| Find / replace in editor        | Ctrl/Cmd+F / Ctrl/Cmd+H |
-| Toggle explorer                 | Ctrl/Cmd+B              |
-| Toggle terminal panel           | Ctrl/Cmd+`              |
-| Settings                        | Ctrl/Cmd+,              |
-| Run configuration               | F5                      |
-| Copy selected terminal text     | Ctrl/Cmd+Shift+C        |
+| Action                           | Shortcut                   |
+| -------------------------------- | -------------------------- |
+| Open project                     | Ctrl/Cmd+O                 |
+| Open project in new window       | Ctrl/Cmd+Shift+O           |
+| Quick open loaded files/actions  | Ctrl/Cmd+P                 |
+| Save / close file                | Ctrl/Cmd+S / Ctrl/Cmd+W    |
+| Find / replace in editor         | Ctrl/Cmd+F / Ctrl/Cmd+H    |
+| Toggle explorer                  | Ctrl/Cmd+B                 |
+| Toggle terminal panel            | Ctrl/Cmd+`                 |
+| Settings                         | Ctrl/Cmd+,                 |
+| Run configuration                | F5                         |
+| Copy selected terminal text      | Ctrl/Cmd+Shift+C           |
+| Paste into terminal              | Ctrl/Cmd+V or Ctrl+Shift+V |
+| Modified Enter for agent newline | Shift+Enter                |
 
 ## Build and test
 

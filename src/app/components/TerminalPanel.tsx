@@ -2,7 +2,6 @@ import {
   Bot,
   ChevronDown,
   Columns2,
-  Command,
   Grid2X2,
   Maximize2,
   Monitor,
@@ -12,16 +11,17 @@ import {
   Rows2,
   TerminalSquare,
 } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useId, useRef, useState } from 'react';
 import AgentPanel from '../../features/agents/components/AgentPanel';
 import RemoteConnections from '../../features/agents/components/RemoteConnections';
 import SessionRail from '../../features/agents/components/SessionRail';
 import { useTerminalWorkspace } from '../../features/agents/hooks/useTerminalWorkspace';
 import type { RemoteProfile, TerminalView } from '../../shared/contracts/remote';
 import type { WorkspaceController } from '../hooks/useWorkspace';
+import TerminalLaunchMenu from './TerminalLaunchMenu';
+import { paneName } from '../../features/agents/services/terminal-title';
 const TerminalPane = lazy(() => import('../../features/agents/components/TerminalPane'));
 const SessionDesk = lazy(() => import('../../features/agents/components/SessionDesk'));
-const colors = ['#b8ee86', '#c4a0ed', '#8bbbf5', '#f1b17f', '#f38ea2'];
 type Props = {
   model: Pick<
     WorkspaceController,
@@ -60,12 +60,15 @@ type Props = {
     | 'observeAgent'
     | 'updateAgentUsage'
     | 'runAgentCommand'
+    | 'updateTerminalTitle'
     | 'paneFocus'
     | 'setSelectedPane'
     | 'git'
   >;
 };
 export default function TerminalPanel({ model }: Props) {
+  const launchTrigger = useRef<HTMLButtonElement>(null);
+  const launchMenuId = useId();
   const handleResizeTerminalPanelPointerDown: React.ComponentProps<'div'>['onPointerDown'] = e =>
     resize('terminal', e);
   const handleResizeTerminalPanelKeyDown: React.ComponentProps<'div'>['onKeyDown'] = e =>
@@ -129,6 +132,7 @@ export default function TerminalPanel({ model }: Props) {
     observeAgent,
     updateAgentUsage,
     runAgentCommand,
+    updateTerminalTitle,
     paneFocus,
     setSelectedPane,
     git,
@@ -243,41 +247,26 @@ export default function TerminalPanel({ model }: Props) {
             className='agent-menu-wrapper'
             style={{ display: workspace.view === 'server' ? 'none' : undefined }}
           >
-            <button className='add-terminal' disabled={!project} onClick={handleAgentMenuClick}>
+            <button
+              ref={launchTrigger}
+              className='add-terminal'
+              disabled={!project}
+              aria-expanded={agentMenu}
+              aria-controls={agentMenu ? launchMenuId : undefined}
+              onClick={handleAgentMenuClick}
+            >
               <Plus size={14} />
               New terminal
               <ChevronDown size={11} />
             </button>
-            {agentMenu && (
-              <>
-                <div className='popover-dismiss' onClick={handleAgentMenuClick2} />
-                <div className='agent-popover popover'>
-                  <div className='popover-title'>LAUNCH IN A NEW PANE</div>
-                  {[
-                    ['Terminal', '', 'Your default shell'],
-                    ['Codex', 'codex', 'OpenAI coding agent'],
-                    ['Claude', 'claude', 'Claude Code'],
-                    ['Gemini', 'gemini', 'Gemini CLI'],
-                  ].map(([name, cmd, detail], i) => {
-                    const handleClick = () => addPane(name, cmd);
-                    return (
-                      <button className='agent-option' key={name} onClick={handleClick}>
-                        <TerminalSquare size={16} style={{ color: colors[i] }} />
-                        <span>
-                          <strong>{name}</strong>
-                          <small>{detail}</small>
-                        </span>
-                        <Plus size={13} />
-                      </button>
-                    );
-                  })}
-                  <button className='menu-item' onClick={handleClick}>
-                    <Command size={14} />
-                    Custom command…
-                  </button>
-                  <p className='popover-note'>Uses CLIs already installed on your computer.</p>
-                </div>
-              </>
+            {agentMenu && terminalVisible && workspace.view !== 'server' && (
+              <TerminalLaunchMenu
+                id={launchMenuId}
+                anchor={launchTrigger}
+                onClose={handleAgentMenuClick2}
+                onLaunch={addPane}
+                onCustom={handleClick}
+              />
             )}
           </div>
           <button
@@ -369,7 +358,7 @@ export default function TerminalPanel({ model }: Props) {
                       onClick={handleSelect}
                     >
                       <i style={{ background: pane.color }} />
-                      {pane.name}
+                      {paneName(pane)}
                     </button>
                   );
                 })}
@@ -401,6 +390,7 @@ export default function TerminalPanel({ model }: Props) {
                           onClose={handleClose}
                           onRestart={handleRestart}
                           onState={paneState}
+                          onTitle={updateTerminalTitle}
                           onError={fail}
                           onObservation={observeAgent}
                           onUsage={updateAgentUsage}

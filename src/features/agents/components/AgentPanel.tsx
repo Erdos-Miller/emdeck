@@ -1,3 +1,4 @@
+import { paneName } from '../services/terminal-title';
 import { Bot, ChevronDown, ChevronUp, Plus, RefreshCw, Search, Settings2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { call, native } from '../../../platform/desktop/api';
@@ -123,12 +124,12 @@ export default function AgentPanel({
         (preferences.showShells || kind !== 'shell') &&
         (filter === 'all' ||
           (filter === 'attention' ? status.tone === 'attention' : kind === filter)) &&
-        `${pane.name} ${pane.command} ${pane.cwd}`.toLowerCase().includes(query.toLowerCase())
+        `${paneName(pane)} ${pane.command} ${pane.cwd}`.toLowerCase().includes(query.toLowerCase())
       );
     })
     .sort((a, b) =>
       sort === 'name'
-        ? a.name.localeCompare(b.name)
+        ? paneName(a).localeCompare(paneName(b))
         : sort === 'attention'
           ? Number(attention.includes(b)) - Number(attention.includes(a))
           : 0

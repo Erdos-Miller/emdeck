@@ -17,6 +17,9 @@ import { useLatest } from '../../../shared/hooks/useLatest';
 import { agentKind, agentStatus, inspectAgentScreen } from '../lib/agents';
 import { createTerminalFitter } from '../services/terminal-fit';
 import { remoteStatus } from '../services/connections';
+import { paneName } from '../services/terminal-title';
+import { bindTerminalAttachments } from '../lib/terminalAttachments';
+import { bindTerminalKeyboard } from '../lib/terminalKeyboard';
 interface Props {
   pane: Pane;
   root: string;
@@ -26,6 +29,7 @@ interface Props {
   onClose: () => void;
   onRestart: () => void;
   onState: (id: string, state: PaneState) => void;
+  onTitle: (id: string, title: string) => void;
   onError: (error: unknown) => void;
   onObservation: (id: string, observation: AgentObservation | null) => void;
   onUsage: (id: string, usage: AgentUsage | null) => void;
@@ -44,6 +48,7 @@ export default function TerminalPane({
   onClose,
   onRestart,
   onState,
+  onTitle,
   onError,
   onObservation,
   onUsage,
@@ -61,7 +66,7 @@ export default function TerminalPane({
     fitRef = useRef<ReturnType<typeof createTerminalFitter> | null>(null);
   const [state, setState] = useState<PaneState>(native ? 'starting' : 'preview');
   const [observation, setObservation] = useState<AgentObservation | undefined>();
-  const callbacks = useLatest({ onState, onError, onObservation, onUsage, onCommand });
+  const callbacks = useLatest({ onState, onTitle, onError, onObservation, onUsage, onCommand });
 
   // Launch inputs are sampled only when the session identity changes. Appearance
   // updates and pane renames must never terminate a running agent.
@@ -91,6 +96,16 @@ export default function TerminalPane({
     term.loadAddon(fit);
     term.open(host.current);
     terminal.current = term;
+    const detachAttachments = bindTerminalAttachments(host.current, term, {
+      id: () => nativeId.current,
+      unavailable: pane.remote
+        ? 'Transfer the file to the remote machine, then paste its remote path. Emdeck does not upload dropped files over SSH yet.'
+        : undefined,
+      onError: error => callbacks.current.onError(error),
+    });
+    const title = term.onTitleChange(value => {
+      if (!disposed) callbacks.current.onTitle(pane.id, value);
+    });
     const fitter = createTerminalFitter(term, () => fit.fit(), {
       request: callback => requestAnimationFrame(callback),
       cancel: id => cancelAnimationFrame(id),
@@ -255,16 +270,7 @@ export default function TerminalPane({
         );
       else if (!ended && native && pendingInput.length < 4096) pendingInput += data;
     });
-    term.attachCustomKeyEventHandler(e => {
-      // F5 belongs to the workspace Run action, including when a terminal has focus.
-      if (e.key === 'F5') return false;
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyC') {
-        if (e.type === 'keydown')
-          void navigator.clipboard.writeText(term.getSelection()).catch(callbacks.current.onError);
-        return false;
-      }
-      return true;
-    });
+    bindTerminalKeyboard(term, error => callbacks.current.onError(error));
     return () => {
       disposed = true;
       clearTimeout(activityTimer);
@@ -277,6 +283,8 @@ export default function TerminalPane({
       element.removeEventListener('pointerdown', fitter.cancel, true);
       element.removeEventListener('keydown', fitter.cancel, true);
       input.dispose();
+      detachAttachments();
+      title.dispose();
       term.dispose();
       terminal.current = null;
       const id = nativeId.current;
@@ -310,14 +318,14 @@ export default function TerminalPane({
   return (
     <section
       className={`terminal-pane ${maximized ? 'maximized' : ''} ${selected ? 'selected-agent' : ''}`}
-      aria-label={`${pane.name} terminal`}
+      aria-label={`${paneName(pane)} terminal`}
       onFocusCapture={onFocus}
     >
       <header className='pane-header'>
         <span className='pane-icon' style={{ color: pane.color }}>
           <TerminalSquare size={13} />
         </span>
-        <strong>{pane.name}</strong>
+        <strong title={paneName(pane)}>{paneName(pane)}</strong>
         <span
           className={`pane-state ${state}`}
           title='Agent activity is detected from the live terminal screen. Connected and Output describe the terminal connection only.'
@@ -351,7 +359,7 @@ export default function TerminalPane({
         </button>
         <button
           className='icon-button'
-          title={`${pane.remote ? 'Disconnect' : 'Close'} ${pane.name}`}
+          title={`${pane.remote ? 'Disconnect' : 'Close'} ${paneName(pane)}`}
           onClick={onClose}
         >
           <X size={13} />

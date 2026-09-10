@@ -1,8 +1,17 @@
 #[derive(Default)]
 pub struct Replies {
     pub bytes: Vec<u8>,
+    pub title: Option<String>,
 }
 impl vt100::Callbacks for Replies {
+    fn set_window_title(&mut self, _: &mut vt100::Screen, title: &[u8]) {
+        let title: String = String::from_utf8_lossy(title)
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(200)
+            .collect();
+        self.title = Some(title.trim().into());
+    }
     fn unhandled_csi(
         &mut self,
         screen: &mut vt100::Screen,
@@ -46,6 +55,34 @@ pub fn replay(parser: &vt100::Parser<Replies>) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn tracks_split_osc_titles_and_bounds_them() {
+        let mut parser = vt100::Parser::new_with_callbacks(24, 80, 0, Replies::default());
+        parser.process(b"\x1b]2;Fix login");
+        assert!(parser.callbacks_mut().title.is_none());
+        parser.process(b" flow\x07");
+        assert_eq!(
+            parser.callbacks_mut().title.as_deref(),
+            Some("Fix login flow")
+        );
+        parser.process(b"\x1b]0;Next task\x1b\\");
+        assert_eq!(parser.callbacks_mut().title.as_deref(), Some("Next task"));
+        parser.process(b"\x1b]1;Icon only\x07");
+        assert_eq!(parser.callbacks_mut().title.as_deref(), Some("Next task"));
+        parser.process(format!("\x1b]2;{}\x07", "🚀".repeat(300)).as_bytes());
+        assert_eq!(
+            parser
+                .callbacks_mut()
+                .title
+                .as_ref()
+                .unwrap()
+                .chars()
+                .count(),
+            200
+        );
+        parser.process(b"\x1b]2;\x07");
+        assert_eq!(parser.callbacks_mut().title.as_deref(), Some(""));
+    }
     #[test]
     fn answers_device_queries_without_a_renderer_and_replays_alternate_screen() {
         let mut parser = vt100::Parser::new_with_callbacks(24, 80, 200, Replies::default());

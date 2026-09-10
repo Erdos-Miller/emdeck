@@ -1,3 +1,4 @@
+import { sessionName } from '../services/terminal-title';
 import { useEffect, useState } from 'react';
 import { sessionCall } from '../../../platform/desktop/sessions';
 import { readStored, store } from '../../../platform/storage/preferences';
@@ -178,7 +179,7 @@ export default function SessionDesk({ active, settings, root, projectName, layou
                       return (
                         <div className='session-agent-row' key={pane.id}>
                           <button disabled={!machine.connection} onClick={handleAttach}>
-                            <strong>{pane.launch.name}</strong>
+                            <strong>{sessionName(pane)}</strong>
                             <span
                               className={`session-state ${stateLabel(pane, !!machine.connection)}`}
                             >
@@ -225,7 +226,7 @@ export default function SessionDesk({ active, settings, root, projectName, layou
         {stop && (
           <div className='session-stop-confirm' role='alert'>
             <span>
-              Stop {stop.pane.launch.name} on {stop.machine.profile.name}? Its running process will
+              Stop {sessionName(stop.pane)} on {stop.machine.profile.name}? Its running process will
               end.
             </span>
             <button onClick={handleConfirmStop}>Stop process</button>
@@ -272,7 +273,7 @@ export default function SessionDesk({ active, settings, root, projectName, layou
                   />
                 ) : (
                   <div className='session-disconnected'>
-                    <strong>{pane.launch.name}</strong>
+                    <strong>{sessionName(pane)}</strong>
                     <p>
                       {machine.profile.name} is offline. Last reported state: {pane.agent.state}.
                       Input is disabled.

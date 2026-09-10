@@ -1,3 +1,4 @@
+import { paneName } from '../services/terminal-title';
 import { Bot, Folder, Globe, Layers, Monitor, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { RemoteProfile } from '../../../shared/contracts/remote';
@@ -51,7 +52,7 @@ export default function SessionRail({
   const handleAttention = () => setAttentionOnly(value => !value);
   const shown = panes.filter(
     pane =>
-      `${pane.name} ${pane.cwd} ${pane.remote?.target.host ?? ''}`
+      `${paneName(pane)} ${pane.cwd} ${pane.remote?.target.host ?? ''}`
         .toLowerCase()
         .includes(query.toLowerCase()) &&
       (!attentionOnly || agentStatus(states[pane.id], observations[pane.id]).tone === 'attention')
@@ -158,11 +159,11 @@ export default function SessionRail({
               className={`rail-session ${selectedPane === pane.id ? 'active' : ''} ${status.tone}`}
               key={pane.id}
               onClick={handleSelect}
-              title={`Focus ${pane.name}`}
+              title={`Focus ${paneName(pane)}`}
             >
               <i style={{ background: pane.color }} />
               <span>
-                <strong>{pane.name}</strong>
+                <strong>{paneName(pane)}</strong>
                 <small>
                   {pane.remote
                     ? remoteStatus(states[pane.id])
