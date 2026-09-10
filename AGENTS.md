@@ -1,8 +1,8 @@
 # Emdeck contributor instructions
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing module
-ownership. This standalone product follows the Erdos Miller engineering
-standards documented here and has no private repository dependencies.
+ownership. Emdeck's contribution rules and dependency boundaries are defined in
+this repository.
 
 - Use Node 22 and Bun 1.3.6. Commit `bun.lock`; do not create another JS
   lockfile.
@@ -39,5 +39,5 @@ standards documented here and has no private repository dependencies.
   background helpers hidden. Verify resolved paths before recursive removal.
 - Tests may use isolated temporary files, Git repositories and shells. Never use
   the user's open projects, credentials or real remotes as fixtures.
-- Do not commit, push, send messages, publish or alter the reference repository
-  unless the user asks for that action.
+- Do not commit, push, send messages or publish unless the user asks for that
+  action.

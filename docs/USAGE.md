@@ -67,10 +67,6 @@ Terminals use CLIs you have already installed and authenticated. Emdeck does not
 bundle agents or require its own AI account. Run configurations execute through
 the configured shell and are never launched merely by opening a project.
 
-The design takes inspiration from WebStorm's workspace organization and
-[Herdr's independent agent terminals](https://herdr.dev/docs/agents/). Emdeck
-does not embed Herdr or claim compatibility with its session protocol.
-
 ## Agent overview and usage
 
 The terminal toolbar also offers an optional **Workspaces** view: spaces grouped
@@ -391,9 +387,6 @@ scripts/              Dependency, IPC registration and code-size checks
 .github/workflows/    Four-target checks, audits, packaging and draft releases
 ```
 
-See [Architecture and repository standards](ARCHITECTURE.md) for ownership, the
-Erdos Miller conventions adopted here, dependency rules and validation.
-
 Settings, recent projects, panel dimensions and run commands are stored in the
 local webview profile. File contents stay local unless you run a Git push, a
 terminal agent, or another command that sends them. Terminal agents and user-run
@@ -402,11 +395,10 @@ confines file operations to explicitly opened roots and rejects traversal and
 symlink escapes. Git metadata and project roots are protected from file
 mutations. Symlink copy/rename/trash is delegated to the system file manager.
 
-This beta does not provide complete WebStorm feature parity. Remote branch
-deletion, force push, advanced worktree operations (move/lock/prune), an
-extension system, global indexed search and debugger integration are not
-implemented. Background-session capabilities and limits are documented in
-[Session server](PERSISTENT-AGENTS.md).
+Remote branch deletion, force push, advanced worktree operations
+(move/lock/prune), an extension system, global indexed search and debugger
+integration are not implemented. Background-session capabilities and limits are
+documented in [Session server](PERSISTENT-AGENTS.md).
 
 Development builds were previously named Relay and Veldri. The application
 retains `dev.relay.ide` and `relay:` preference keys to preserve existing local

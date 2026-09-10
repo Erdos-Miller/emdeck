@@ -5,7 +5,7 @@ CodeMirror and xterm. It uses the system webview and adds no indexing service,
 language server or database. Its optional headless server owns ordinary CLI
 processes; it does not replace their agent runtimes.
 
-## Engineering standards
+## Project conventions
 
 Emdeck's contributor requirements are defined in [AGENTS.md](../AGENTS.md) and
 enforced by the configuration and checks in this repository:
@@ -18,9 +18,6 @@ enforced by the configuration and checks in this repository:
   consistent development environment.
 - Components and hooks have a 500-line limit, services 700 and tests 900, with
   no legacy exemptions.
-
-Emdeck is a standalone product. Building, testing and contributing require no
-private repositories, corporate services or production data.
 
 ## Ownership and dependencies
 

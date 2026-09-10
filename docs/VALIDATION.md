@@ -222,11 +222,10 @@ soak remains applicable. Desktop rendering is checked separately.
   Ubuntu `.deb` packages; AppImage packaging awaits a separate review of bundled
   system-library notices/source information.
 
-## 0.1.19 — Architecture and EM repository conventions
+## 0.1.19 — Architecture and project conventions
 
-- Applied engineering standards for domain boundaries, native conventions,
-  formatting and file-size limits to this standalone desktop product; see
-  [Architecture](ARCHITECTURE.md).
+- Added checks for domain boundaries, native conventions, formatting and
+  file-size limits; see [Architecture](ARCHITECTURE.md).
 - Split the application into feature modules, workspace controllers and views,
   shared contracts, platform adapters and ordered styles. `App.tsx` is now 213
   lines (previously 2,323); the style entry is 22 lines (previously 3,504).
@@ -260,8 +259,7 @@ soak remains applicable. Desktop rendering is checked separately.
   executable `release/Emdeck-0.1.19.exe` and installer
   `release/Emdeck_0.1.19_x64-setup.exe` are available for review.
 - macOS/Linux builds and GitHub workflows were not run from this Windows host.
-  This refactor does not establish complete WebStorm feature parity or add code
-  signing, notarization or release distribution.
+  This refactor did not add code signing, notarization or release distribution.
 
 ## 0.1.18 — Branch actions in a submenu
 
