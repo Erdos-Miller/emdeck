@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add community feedback routes, structured bug/feature forms, a public roadmap,
+  maintainer ownership, and a reviewed fork-to-dev contribution process.
 - Protect unsaved manual merge drafts when closing immediately after typing,
   including before React finishes updating the interface.
 - Resolve conflicts in a file-list modal with complete Ours/Theirs choices and a

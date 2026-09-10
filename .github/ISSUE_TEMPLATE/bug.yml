@@ -1,13 +1,37 @@
 name: Bug report
 description: Report a reproducible problem in Emdeck.
+title: "[Bug]: "
+labels: ["bug", "status: triage"]
 body:
   - type: markdown
     attributes:
       value: Do not include secrets, private source, or agent transcripts. Report security issues using the Security tab.
+  - type: checkboxes
+    id: existing
+    attributes:
+      label: Before reporting
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
   - type: input
     id: version
     attributes:
       label: Emdeck version
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Files or editor
+        - Git or worktrees
+        - Terminals or agents
+        - Remote or background sessions
+        - Run commands
+        - Layout or appearance
+        - Installation or updates
+        - Other / unsure
     validations:
       required: true
   - type: input
@@ -30,3 +54,8 @@ body:
       label: Expected and actual behavior
     validations:
       required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or sanitized logs
+      description: Optional. Remove credentials, private paths, project contents, and agent conversations before attaching evidence.

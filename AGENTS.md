@@ -7,7 +7,9 @@ this repository.
 - Use Node 22 and Bun 1.3.6. Commit `bun.lock`; do not create another JS
   lockfile.
 - Keep repository branches limited to `main` and `dev`. Develop on `dev` and
-  promote to `main` through the required checks and independent review.
+  promote to `main` through the required checks and independent review. Publish
+  changes through a fork PR targeting `dev`; direct pushes to either protected
+  branch are disabled. Use a merge commit for `dev` → `main` promotion.
 - Keep domain services independent of React, Tauri and browser storage. Receive
   IO through typed ports. Compose features in `src/app`, never through sibling
   feature imports. Contracts belong in `src/shared/contracts`.
