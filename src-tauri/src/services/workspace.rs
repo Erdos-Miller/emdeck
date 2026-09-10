@@ -76,6 +76,49 @@ pub fn resolve(root: &Path, relative: &str, write: bool) -> Result<PathBuf> {
     Ok(resolved)
 }
 
+const FIND_LIMIT: usize = 24;
+const FIND_DEPTH: usize = 12;
+const SKIPPED: [&str; 6] = [".git", "node_modules", "target", "dist", ".cache", "vendor"];
+
+// Terminal references are often a bare file name, which only a search can resolve.
+pub fn find(root: &Path, name: &str) -> Result<Vec<String>> {
+    let name = name.trim_start_matches("./");
+    let mut components = Path::new(name).components();
+    if !matches!(components.next(), Some(Component::Normal(_))) || components.next().is_some() {
+        return Err("Search for a single file name.".into());
+    }
+    let mut found = vec![];
+    let mut queue = vec![(root.to_path_buf(), String::new(), 0usize)];
+    while let Some((directory, prefix, depth)) = queue.pop() {
+        if found.len() >= FIND_LIMIT {
+            break;
+        }
+        let Ok(entries) = fs::read_dir(&directory) else {
+            continue;
+        };
+        for item in entries.flatten() {
+            let entry = item.file_name().to_string_lossy().into_owned();
+            let relative = if prefix.is_empty() {
+                entry.clone()
+            } else {
+                format!("{prefix}/{entry}")
+            };
+            if item.file_type().is_ok_and(|ty| ty.is_dir()) {
+                if depth + 1 < FIND_DEPTH && !SKIPPED.contains(&entry.as_str()) {
+                    queue.push((item.path(), relative, depth + 1));
+                }
+            } else if entry == name {
+                found.push(relative);
+            }
+        }
+    }
+    // Shallower first, then by path so a repeated name always resolves the same way.
+    found.sort_by(|a, b| {
+        (a.matches('/').count(), a.len(), a).cmp(&(b.matches('/').count(), b.len(), b))
+    });
+    Ok(found)
+}
+
 pub fn list(root: &Path, relative: &str) -> Result<Vec<Entry>> {
     let directory = resolve(root, relative, false)?;
     let mut entries = vec![];
@@ -269,6 +312,35 @@ pub fn remove(root: &Path, relative: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn find_locates_names_shallowest_first_and_skips_dependency_directories() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        for path in [
+            "src/features/agents",
+            "src/app",
+            "node_modules/pkg",
+            "target/debug",
+        ] {
+            fs::create_dir_all(root.join(path)).unwrap();
+        }
+        fs::write(root.join("src/features/agents/links.ts"), "deep").unwrap();
+        fs::write(root.join("src/app/links.ts"), "shallow").unwrap();
+        fs::write(root.join("node_modules/pkg/links.ts"), "ignored").unwrap();
+        fs::write(root.join("target/debug/links.ts"), "ignored").unwrap();
+
+        assert_eq!(
+            find(root, "links.ts").unwrap(),
+            vec!["src/app/links.ts", "src/features/agents/links.ts"]
+        );
+        assert_eq!(find(root, "./links.ts").unwrap().len(), 2);
+        assert!(find(root, "missing.ts").unwrap().is_empty());
+        assert!(find(root, "src/app/links.ts").is_err());
+        assert!(find(root, "").is_err());
+        assert!(find(root, "..").is_err());
+    }
+
     #[cfg(windows)]
     #[test]
     fn saves_after_a_temporary_windows_replacement_lock() {

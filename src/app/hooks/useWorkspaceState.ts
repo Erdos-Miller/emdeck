@@ -39,6 +39,12 @@ export function useWorkspaceState() {
   const [agentUsage, setAgentUsage] = useState<Record<string, AgentUsage>>({});
   const [selectedPane, setSelectedPane] = useState<string | null>(null);
   const [paneFocus, setPaneFocus] = useState({ id: '', sequence: 0 });
+  const [reveal, setReveal] = useState<{
+    path: string;
+    line: number;
+    column?: number;
+    sequence: number;
+  } | null>(null);
   const [layout, setLayout] = useState<Layout>(() => readStored('relay:layout', 'columns'));
   const [terminalVisible, setTerminalVisible] = useState(true);
   const [terminalFull, setTerminalFull] = useState(false);
@@ -182,6 +188,8 @@ export function useWorkspaceState() {
     selectedPane,
     setSelectedPane,
     paneFocus,
+    reveal,
+    setReveal,
     setPaneFocus,
     layout,
     setLayout,

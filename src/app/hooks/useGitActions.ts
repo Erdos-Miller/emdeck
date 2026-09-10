@@ -1,8 +1,8 @@
 import { hasUnsavedFiles } from '../../features/editor/services/documents';
 import { hasConflictMarkers } from '../../features/git/services/conflicts';
-import { shortRef } from '../../features/git/services/references';
+import { qualifyRef, shortRef } from '../../features/git/services/references';
 import { api } from '../../platform/desktop/api';
-import type { BranchRequest } from '../../shared/contracts/workspace';
+import type { AgentCommand, BranchRequest } from '../../shared/contracts/workspace';
 import type { useEditorActions } from './useEditorActions';
 import type { useTabActions } from './useTabActions';
 import type { useWorkspaceRefresh } from './useWorkspaceRefresh';
@@ -29,7 +29,7 @@ type Dependencies = Pick<
   | 'setSidebar'
   | 'setSidebarVisible'
 > &
-  Pick<ReturnType<typeof useEditorActions>, 'saveFile'> &
+  Pick<ReturnType<typeof useEditorActions>, 'saveFile' | 'openFile'> &
   Pick<ReturnType<typeof useWorkspaceRefresh>, 'refresh'> &
   Pick<ReturnType<typeof useTabActions>, 'showWorktrees'> &
   Pick<ReturnType<typeof useConflictActions>, 'showConflicts'>;
@@ -40,6 +40,7 @@ export function useGitActions({
   notify,
   confirm,
   saveFile,
+  openFile,
   git,
   setGitBusy,
   setBranchMenu,
@@ -345,5 +346,37 @@ export function useGitActions({
     });
     if (data) await gitAction('create', data.name);
   };
-  return { gitAction, branchAction, createBranch };
+  // Agents address paths from the pane's own directory, which is relative to the root.
+  const runAgentCommand = async (command: AgentCommand, cwd: string) => {
+    if (command.op === 'openFile') {
+      let relative = command.path.replace(/^\.\//, '');
+      const target = command.line ? { line: command.line, column: command.column } : undefined;
+      // Compilers and agents print absolute paths, which only resolve inside this project.
+      if (/^(\/|[A-Za-z]:[\\/])/.test(relative)) {
+        const root = project?.root.replace(/[\\/]$/, '') ?? '';
+        if (!root || !relative.startsWith(root))
+          throw new Error(`'${relative}' is outside this project.`);
+        relative = relative.slice(root.length).replace(/^[\\/]+/, '');
+      }
+      // A bare name cannot be resolved by joining, so search the project for it.
+      if (project && !relative.includes('/')) {
+        const matches = await api.find(project.root, relative);
+        if (!matches.length) throw new Error(`No file named '${relative}' in this project.`);
+        if (matches.length > 1) notify(`Opened ${matches[0]} of ${matches.length} matches.`);
+        await openFile(matches[0], undefined, target);
+        return;
+      }
+      const resolved = cwd ? `${cwd.replace(/\/$/, '')}/${relative}` : relative;
+      if (resolved.split('/').some(part => part === '..'))
+        throw new Error(`'${resolved}' points outside the project.`);
+      await openFile(resolved, undefined, target);
+      return;
+    }
+    if (!project || !git) throw new Error('Open a Git project before requesting a diff.');
+    if (gitLock.current) throw new Error('Emdeck is busy with another Git operation.');
+    const reference = qualifyRef(command.reference, git.localBranches, git.remoteBranches);
+    if (!reference) throw new Error(`No branch named '${command.reference}'.`);
+    await branchAction(command.working ? 'diff-working' : 'compare', reference);
+  };
+  return { gitAction, branchAction, createBranch, runAgentCommand };
 }

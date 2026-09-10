@@ -14,6 +14,15 @@ pub(crate) async fn read_directory(
     workspace::list(&projects.root(window.label(), &root)?, &path)
 }
 #[tauri::command]
+pub(crate) async fn find_file(
+    window: tauri::Window,
+    root: String,
+    name: String,
+    projects: State<'_, Projects>,
+) -> Result<Vec<String>> {
+    workspace::find(&projects.root(window.label(), &root)?, &name)
+}
+#[tauri::command]
 pub(crate) async fn read_file(
     window: tauri::Window,
     root: String,

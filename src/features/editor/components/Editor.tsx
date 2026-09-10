@@ -109,6 +109,7 @@ export interface EditorProps {
   onCursor: (line: number, column: number) => void;
   onSave: () => void;
   openPaths: string[];
+  reveal?: { line: number; column?: number; sequence: number } | null;
 }
 export default function Editor({
   file,
@@ -117,6 +118,7 @@ export default function Editor({
   onCursor,
   onSave,
   openPaths,
+  reveal,
 }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -200,6 +202,22 @@ export default function Editor({
   useEffect(() => {
     view.current?.dispatch({ effects: compartments.current.theme.reconfigure(theme(settings)) });
   }, [settings]);
+  // Keyed on sequence too, so asking for the same line twice still scrolls to it.
+  const { line: revealLine, column: revealColumn, sequence: revealSequence } = reveal ?? {};
+  const revealed = useRef(0);
+  useEffect(() => {
+    const editor = view.current;
+    // Switching tabs re-supplies the same request; replaying it would move the cursor again.
+    if (!revealLine || !editor || revealSequence === revealed.current) return;
+    revealed.current = revealSequence ?? 0;
+    const line = editor.state.doc.line(Math.min(revealLine, editor.state.doc.lines));
+    const position = Math.min(line.from + Math.max((revealColumn ?? 1) - 1, 0), line.to);
+    editor.dispatch({
+      selection: { anchor: position },
+      effects: EditorView.scrollIntoView(position, { y: 'center' }),
+    });
+    editor.focus();
+  }, [revealLine, revealColumn, revealSequence]);
   useEffect(() => {
     for (const key of cache.current.keys()) if (!openPaths.includes(key)) cache.current.delete(key);
   }, [openPaths]);

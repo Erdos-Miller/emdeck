@@ -25,6 +25,7 @@ type Props = {
     | 'showConflicts'
     | 'changeFile'
     | 'openFile'
+    | 'reveal'
     | 'settings'
     | 'changeCursor'
     | 'saveFile'
@@ -52,6 +53,7 @@ export default function EditorContent({ model }: Props) {
     activeConflicts,
     showConflicts,
     changeFile,
+    reveal,
     openFile,
     settings,
     changeCursor,
@@ -107,6 +109,7 @@ export default function EditorContent({ model }: Props) {
               settings={settings}
               onChange={changeFile}
               onCursor={changeCursor}
+              reveal={reveal && reveal.path === file.path ? reveal : null}
               onSave={handleSave}
               openPaths={files.map(f => f.path)}
             />

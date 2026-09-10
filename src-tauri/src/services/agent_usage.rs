@@ -78,21 +78,27 @@ pub struct Probe {
     directory: tempfile::TempDir,
 }
 impl Probe {
+    // Every pane gets a directory so the command channel exists; only Claude reports usage.
     pub fn new() -> Result<Self> {
-        let directory = tempfile::Builder::new()
-            .prefix("emdeck-agent-")
-            .tempdir()
-            .map_err(err)?;
-        let report = directory.path().join("usage.json");
+        Ok(Self {
+            directory: tempfile::Builder::new()
+                .prefix("emdeck-agent-")
+                .tempdir()
+                .map_err(err)?,
+        })
+    }
+    pub fn reporting() -> Result<Self> {
+        let probe = Self::new()?;
+        let report = probe.directory.path().join("usage.json");
         let exe = std::env::current_exe().map_err(err)?;
         let command = reporter_command(&exe, &report);
         fs::write(
-            directory.path().join("settings.json"),
+            probe.directory.path().join("settings.json"),
             serde_json::to_vec(&json!({"statusLine":{"type":"command", "command":command}}))
                 .map_err(err)?,
         )
         .map_err(err)?;
-        Ok(Self { directory })
+        Ok(probe)
     }
     pub fn command(&self, shell: &str) -> Result<String> {
         let file = self
@@ -121,6 +127,9 @@ impl Probe {
             "claude --settings {}",
             shell_quote(&file, powershell)
         ))
+    }
+    pub fn directory(&self) -> &Path {
+        self.directory.path()
     }
     pub fn read(&self) -> Option<Usage> {
         let path = self.directory.path().join("usage.json");

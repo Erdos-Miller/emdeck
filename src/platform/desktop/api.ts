@@ -29,6 +29,7 @@ export const api = {
   startupProject: () => call('startup_project'),
   list: (root: string, path = '') => call('read_directory', { root, path }),
   read: (root: string, path: string) => call('read_file', { root, path }),
+  find: (root: string, name: string) => call('find_file', { root, name }),
   save: (root: string, path: string, content: string, revision: string) =>
     call('save_file', { root, path, content, revision }),
   git: (root: string) => call('git_snapshot', { root }),

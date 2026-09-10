@@ -1,7 +1,7 @@
 mod commands;
 mod services;
 mod state;
-use services::{agent_usage, codex_usage, terminal};
+use services::{agent_command, agent_usage, codex_usage, terminal};
 use state::Projects;
 use tauri::Manager;
 
@@ -13,7 +13,7 @@ pub fn run() {
         }
         return;
     }
-    if agent_usage::report_cli() {
+    if agent_usage::report_cli() || agent_command::command_cli() {
         return;
     }
     tauri::Builder::default()
@@ -53,6 +53,7 @@ pub fn run() {
             commands::projects::open_project_window,
             commands::workspace::read_directory,
             commands::workspace::read_file,
+            commands::workspace::find_file,
             commands::workspace::read_image,
             commands::workspace::open_external_url,
             commands::workspace::save_file,

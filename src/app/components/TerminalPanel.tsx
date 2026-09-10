@@ -59,6 +59,7 @@ type Props = {
     | 'fail'
     | 'observeAgent'
     | 'updateAgentUsage'
+    | 'runAgentCommand'
     | 'paneFocus'
     | 'setSelectedPane'
     | 'git'
@@ -127,6 +128,7 @@ export default function TerminalPanel({ model }: Props) {
     fail,
     observeAgent,
     updateAgentUsage,
+    runAgentCommand,
     paneFocus,
     setSelectedPane,
     git,
@@ -148,6 +150,10 @@ export default function TerminalPanel({ model }: Props) {
   const handleConnections = () => workspace.setConnectionsOpen(true);
   const handleConnectionsClose = () => workspace.setConnectionsOpen(false);
   const handleConnect = (profile: RemoteProfile) => void workspace.connect(profile);
+  const handleAgentCommand: React.ComponentProps<typeof TerminalPane>['onCommand'] = (
+    id,
+    command
+  ) => void runAgentCommand(command, panes.find(pane => pane.id === id)?.cwd ?? '').catch(fail);
   const visibleIds = new Set(workspace.visiblePanes.map(pane => pane.id));
   return (
     <>
@@ -398,6 +404,7 @@ export default function TerminalPanel({ model }: Props) {
                           onError={fail}
                           onObservation={observeAgent}
                           onUsage={updateAgentUsage}
+                          onCommand={handleAgentCommand}
                           enhancedUsage={agentPreferences.claudeUsage}
                           focusRequest={paneFocus.id === pane.id ? paneFocus.sequence : 0}
                           selected={selectedPane === pane.id}
