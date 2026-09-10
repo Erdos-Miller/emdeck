@@ -7,11 +7,13 @@ export function Modal({
   onClose,
   children,
   wide = false,
+  className = '',
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  className?: string;
 }) {
   const handleCloseMouseDown: React.ComponentProps<'div'>['onMouseDown'] = e => {
     if (e.target === e.currentTarget) onClose();
@@ -25,6 +27,8 @@ export function Modal({
     const first = node?.querySelector<HTMLElement>('input, select, textarea, button');
     first?.focus();
     const key = (e: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (dialogs[dialogs.length - 1] !== node) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         close.current();
@@ -56,7 +60,7 @@ export function Modal({
     <div className='modal-backdrop' onMouseDown={handleCloseMouseDown}>
       <div
         ref={ref}
-        className={`modal ${wide ? 'wide' : ''}`}
+        className={`modal ${wide ? 'wide' : ''} ${className}`}
         role='dialog'
         aria-modal='true'
         aria-label={title}

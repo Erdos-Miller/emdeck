@@ -1,9 +1,33 @@
 use crate::services::workspace::{err, Result};
 use crate::{
-    services::{git, git_branches, worktrees},
+    services::{git, git_branches, git_conflicts, worktrees},
     state::Projects,
 };
 use tauri::{Manager, State};
+#[tauri::command]
+pub(crate) async fn git_conflict(
+    window: tauri::Window,
+    root: String,
+    path: String,
+    projects: State<'_, Projects>,
+) -> Result<git_conflicts::Conflict> {
+    let root = projects.root(window.label(), &root)?;
+    tauri::async_runtime::spawn_blocking(move || git_conflicts::read(&root, &path))
+        .await
+        .map_err(err)?
+}
+#[tauri::command]
+pub(crate) async fn git_resolve_conflict(
+    window: tauri::Window,
+    root: String,
+    request: git_conflicts::Resolution,
+    projects: State<'_, Projects>,
+) -> Result<()> {
+    let root = projects.root(window.label(), &root)?;
+    tauri::async_runtime::spawn_blocking(move || git_conflicts::resolve(&root, &request))
+        .await
+        .map_err(err)?
+}
 #[tauri::command]
 pub(crate) async fn git_snapshot(
     window: tauri::Window,

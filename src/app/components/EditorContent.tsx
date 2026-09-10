@@ -8,7 +8,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import { resolveConflict } from '../../features/git/services/conflicts';
 import { native } from '../../platform/desktop/api';
 import { FileIcon } from '../../shared/ui/FileIcon';
 import type { WorkspaceController } from '../hooks/useWorkspace';
@@ -23,6 +22,7 @@ type Props = {
     | 'project'
     | 'reloadFile'
     | 'activeConflicts'
+    | 'showConflicts'
     | 'changeFile'
     | 'openFile'
     | 'settings'
@@ -42,6 +42,7 @@ export default function EditorContent({ model }: Props) {
   const handleSave = () => void saveFile().catch(fail);
   const handleClick2 = () => void openProject();
   const handleClick3 = () => addPane('Terminal');
+  const handleResolve = () => showConflicts(file?.path);
   const {
     activeDiff,
     worktreesActive,
@@ -49,6 +50,7 @@ export default function EditorContent({ model }: Props) {
     project,
     reloadFile,
     activeConflicts,
+    showConflicts,
     changeFile,
     openFile,
     settings,
@@ -93,17 +95,7 @@ export default function EditorContent({ model }: Props) {
               <strong>
                 {activeConflicts.length} conflict{activeConflicts.length > 1 ? 's' : ''}
               </strong>
-              <span>Resolve first conflict:</span>
-              {(['ours', 'theirs', 'both'] as const).map(choice => {
-                const handleClick = () =>
-                  changeFile(file.path, resolveConflict(file.content, activeConflicts[0], choice));
-                return (
-                  <button key={choice} onClick={handleClick}>
-                    Accept {choice}
-                  </button>
-                );
-              })}
-              <small>Then save and stage.</small>
+              <button onClick={handleResolve}>Resolve in merge dialog…</button>
             </div>
           )}
           <Suspense fallback={<div className='loading'>Opening editor…</div>}>

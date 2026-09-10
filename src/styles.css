@@ -1,5 +1,6 @@
 /* Keep import order stable: themes, shared primitives, features, then responsive overrides. */
 @import "./styles/foundation.css";
+@import "./styles/scrollbars.css";
 @import "./styles/shell.css";
 @import "./styles/explorer.css";
 @import "./styles/layout.css";
@@ -20,5 +21,6 @@
 @import "./styles/source-control.css";
 @import "./styles/worktrees.css";
 @import "./styles/diffs.css";
+@import "./styles/conflicts.css";
 @import "./styles/responsive.css";
 @import "./styles/session-server.css";

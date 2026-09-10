@@ -88,6 +88,13 @@ export function useWorkspaceState() {
   const activeDiff = worktreesActive ? undefined : diffTabs.find(tab => tab.id === activeDiffId);
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
   const [recent, setRecent] = useState<Project[]>(() => readStored('relay:recent', []));
+  const [conflictRequest, setConflictRequest] = useState<{ root: string; path?: string } | null>(
+    null
+  );
+  const mergeDraftDirty = useRef(false);
+  const setMergeDraftDirty = useCallback((dirty: boolean) => {
+    mergeDraftDirty.current = dirty;
+  }, []);
   const latest = useLatest({ project, files, panes, expanded, settings });
 
   const gitLock = useRef(false),
@@ -130,6 +137,10 @@ export function useWorkspaceState() {
     store('relay:sidebar-width', sidebarWidth);
   }, [terminalHeight, sidebarWidth]);
   return {
+    conflictRequest,
+    setConflictRequest,
+    mergeDraftDirty,
+    setMergeDraftDirty,
     project,
     setProject,
     directories,

@@ -27,6 +27,7 @@ type Props = {
     | 'showDiff'
     | 'setBranchMenu'
     | 'showWorktrees'
+    | 'showConflicts'
     | 'openProject'
     | 'resize'
     | 'resizeKey'
@@ -76,6 +77,7 @@ export default function WorkspaceSidebar({ model }: Props) {
     showDiff,
     setBranchMenu,
     showWorktrees,
+    showConflicts,
     openProject,
     resize,
     resizeKey,
@@ -112,6 +114,7 @@ export default function WorkspaceSidebar({ model }: Props) {
                 onDiff={handleDiff}
                 onBranches={handleBranchMenuBranches}
                 onWorktrees={showWorktrees}
+                onResolve={showConflicts}
               />
             )
           ) : (

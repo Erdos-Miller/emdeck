@@ -1,5 +1,5 @@
 import { hasUnsavedFiles } from '../../features/editor/services/documents';
-import { conflicts } from '../../features/git/services/conflicts';
+import { hasConflictMarkers } from '../../features/git/services/conflicts';
 import { shortRef } from '../../features/git/services/references';
 import { api } from '../../platform/desktop/api';
 import type { BranchRequest } from '../../shared/contracts/workspace';
@@ -7,6 +7,7 @@ import type { useEditorActions } from './useEditorActions';
 import type { useTabActions } from './useTabActions';
 import type { useWorkspaceRefresh } from './useWorkspaceRefresh';
 import type { useWorkspaceState } from './useWorkspaceState';
+import type { useConflictActions } from './useConflictActions';
 type Dependencies = Pick<
   ReturnType<typeof useWorkspaceState>,
   | 'project'
@@ -30,7 +31,8 @@ type Dependencies = Pick<
 > &
   Pick<ReturnType<typeof useEditorActions>, 'saveFile'> &
   Pick<ReturnType<typeof useWorkspaceRefresh>, 'refresh'> &
-  Pick<ReturnType<typeof useTabActions>, 'showWorktrees'>;
+  Pick<ReturnType<typeof useTabActions>, 'showWorktrees'> &
+  Pick<ReturnType<typeof useConflictActions>, 'showConflicts'>;
 export function useGitActions({
   project,
   gitLock,
@@ -53,6 +55,7 @@ export function useGitActions({
   ask,
   setSidebar,
   setSidebarVisible,
+  showConflicts,
 }: Dependencies) {
   const gitAction = async (action: string, value: string, original: string | null = null) => {
     if (!project || gitLock.current) return;
@@ -79,7 +82,7 @@ export function useGitActions({
         }
         try {
           const data = await api.read(project.root, value);
-          if (conflicts(data.content).length) {
+          if (hasConflictMarkers(data.content)) {
             notify('Resolve all conflict markers before staging this file.', true);
             return;
           }
@@ -118,7 +121,12 @@ export function useGitActions({
     } finally {
       gitLock.current = false;
       setGitBusy(false);
-      await refresh();
+      const result = await refresh();
+      if (
+        ['merge', 'merge-remote'].includes(action) &&
+        result?.changes.some(change => change.conflict)
+      )
+        showConflicts();
     }
   };
   const branchAction = async (action: string, reference: string) => {
@@ -315,7 +323,16 @@ export function useGitActions({
     } finally {
       gitLock.current = false;
       setGitBusy(false);
-      if (attempted) await refresh();
+      if (attempted) {
+        const result = await refresh();
+        if (
+          ['merge', 'rebase', 'checkout-rebase', 'checkout-update', 'update', 'continue'].includes(
+            action
+          ) &&
+          result?.changes.some(change => change.conflict)
+        )
+          showConflicts();
+      }
     }
   };
   const createBranch = async () => {

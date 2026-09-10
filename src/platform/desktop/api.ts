@@ -10,6 +10,7 @@ import type {
   TerminalEvent,
 } from '../../shared/contracts/workspace';
 import type { SshTarget } from '../../shared/contracts/remote';
+import type { ConflictResolution } from '../../shared/contracts/gitConflicts';
 export const native = isTauri();
 export async function call<C extends DesktopCommand>(
   command: C,
@@ -31,6 +32,9 @@ export const api = {
   save: (root: string, path: string, content: string, revision: string) =>
     call('save_file', { root, path, content, revision }),
   git: (root: string) => call('git_snapshot', { root }),
+  conflict: (root: string, path: string) => call('git_conflict', { root, path }),
+  resolveConflict: (root: string, request: ConflictResolution) =>
+    call('git_resolve_conflict', { root, request }),
   gitAction: (root: string, action: string, value: string, original: string | null = null) =>
     call('git_action', { root, action, value, original }),
   branchAction: (root: string, request: BranchRequest) =>
