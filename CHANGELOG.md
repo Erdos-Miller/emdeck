@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Give the Windows Bun shell smoke test a bounded 60-second process budget and
+  report launch errors, timeout details and captured output instead of a null
+  exit-status assertion. Missing Bun now fails this required integration check.
 - Restore Ctrl/Cmd+V and Ctrl+Shift+V paste in regular and background terminals,
   including clipboard images/files. Send a distinct Shift+Enter key for
   multiline prompts and preserve Enter, Ctrl+J, Alt+Enter and Ctrl+C behavior.
