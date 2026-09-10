@@ -21,5 +21,15 @@ src-tauri/icons/ios/
 *.p12
 *.pfx
 *.mobileprovision
+.npmrc
+.netrc
+.claude/
+.codex/
+.agents/
+.idea/
+.ssh/
+.aws/
+.azure/
+.kube/
 .DS_Store
 Thumbs.db

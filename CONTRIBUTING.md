@@ -15,15 +15,21 @@ bun run desktop
 
 `bun run dev` runs the browser demo using sample files and simulated agents.
 Read [AGENTS.md](AGENTS.md) and [Architecture](docs/ARCHITECTURE.md) before
-changing ownership or lifecycle behavior. The private EM monorepo is not needed
-to build or contribute to this repository.
+changing ownership or lifecycle behavior. All requirements for building and
+contributing are documented in this repository.
 
 ## Pull requests
 
-Create a branch from the default branch. Explain the problem and resulting
-behavior, and include a screenshot for visible changes. Add behavior tests for
-new functionality; use isolated test repositories and shells. Do not include
-credentials, private source, agent transcripts, or screenshots of real projects.
+The repository keeps two branches: `main` for reviewed release-ready source and
+`dev` for ongoing development. Maintainers work on `dev` and open a pull request
+from `dev` to `main` for promotion. External contributors work in a fork and
+target `dev`; do not create extra branches in this repository. CI runs on pushes
+to both branches and on incoming pull requests to `dev`.
+
+Explain the problem and resulting behavior, and include a screenshot for visible
+changes. Add behavior tests for new functionality; use isolated test
+repositories and shells. Do not include credentials, private source, agent
+transcripts, or screenshots of real projects.
 
 ```sh
 bun run verify
@@ -36,6 +42,10 @@ For browser tests outside Windows, install Chromium once with
 Changes to dependencies must regenerate license notices and pass the security
 checks in [Release process](docs/RELEASE.md). Keep the Bun and Cargo lockfiles
 committed. Never bypass checks to merge a release.
+
+Routine dependency updates are made on `dev`. Automatic Dependabot version pull
+requests are disabled to avoid extra branches; vulnerability alerts and the
+scheduled security audit remain available.
 
 ## Issues and conduct
 

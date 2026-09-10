@@ -95,7 +95,7 @@ export function useProjectActions({
         (hasUnsavedFiles(latest.current.files) || latest.current.panes.length > 0) &&
         !(await confirm(
           'Switch workspace?',
-          'Unsaved edits will be discarded and terminals in this workspace will close.',
+          'Unsaved edits will be discarded. Local terminals will close and remote connections in this workspace will disconnect.',
           'Switch workspace'
         ))
       )

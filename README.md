@@ -12,7 +12,11 @@ known gaps are recorded in [Validation](docs/VALIDATION.md).
 
 Open a project, edit a few files, and keep your terminal agents in view. Emdeck
 does not build a project index, run language servers, lint in the background, or
-start agents automatically.
+start agents merely because a project was opened.
+
+The unreleased **Background sessions** view uses Emdeck's own optional headless
+server to keep local and remote terminal agents running after the IDE closes.
+See [setup, automation and current limits](docs/PERSISTENT-AGENTS.md).
 
 ![Emdeck workspace with files, editor and agent terminals](docs/screenshots/workspace-dark.png)
 
@@ -68,6 +72,13 @@ The design takes inspiration from WebStorm's workspace organization and
 does not embed Herdr or claim compatibility with its session protocol.
 
 ## Agent overview and usage
+
+The terminal toolbar also offers an optional **Workspaces** view: spaces grouped
+by working folder or remote connection, session tabs, and attention filtering.
+Use the monitor button to configure cmux TUI, tmux, SSH commands, or provider
+session links. Connections are always explicit. See
+[Terminal workspaces and remote sessions](docs/REMOTE-SESSIONS.md) for setup,
+disconnect behavior, and which integrations run inside Emdeck or in a browser.
 
 The **Agents** button in the terminal toolbar shows a searchable session
 overview beside the terminals. Filter by provider or attention, sort by

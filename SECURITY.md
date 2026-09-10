@@ -36,7 +36,15 @@ installed provider CLI. See [Privacy](docs/PRIVACY.md).
 ## Dependency policy
 
 CI runs JavaScript vulnerability checks, Rust advisory/license/source checks,
-and redacted source/history secret scans. Dependency updates are proposed
-weekly. Reviewed upstream maintenance notices are documented in
+and redacted source/history secret scans. Source scans use Git's publication
+inventory, including force-tracked ignored files; untracked credentials and
+build outputs are excluded. Neither source nor history scans have path
+exemptions, ignore-file suppressions or inline allow comments. Publication
+symlinks require explicit review rather than following them into local data.
+Screenshots and documentation must also be reviewed for private information that
+credential patterns cannot identify. Dependency updates are maintained on `dev`;
+automated version-update pull requests are disabled under the two-branch policy.
+Vulnerability alerts and the weekly security audit remain enabled. Reviewed
+upstream maintenance notices are documented in
 [Dependency review](docs/DEPENDENCIES.md); vulnerabilities are not silently
 excluded to pass a build.

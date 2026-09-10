@@ -2,7 +2,3 @@ title = "Emdeck source and history secret scanning"
 
 [extend]
 useDefault = true
-
-[[allowlists]]
-description = "Local dependencies, build outputs, and audit scratch data are not source artifacts"
-paths = ['''(^|[\\/])(node_modules|target|dist|test-results|playwright-report|\.tmp|\.git)[\\/]''', '''^(\.[\\/])?release[\\/]''']

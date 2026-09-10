@@ -1,5 +1,28 @@
 # React audit — 0.1.19
 
+## Unreleased — background session server
+
+React Doctor 0.9.13 reports four previously reviewed Worktrees false positives
+and 61 advisory warnings. The three new findings concern list iterations and
+array lookups in `SessionDesk` and `useSessionMachines`, bounded to 16 machine
+profiles and 64 panes per server. They are retained as optimization advice.
+Input is serialized, pane identities remain stable across view/layout changes,
+and the server view loads only when selected. Mandatory architecture, size, lint
+and behavioral checks remain separate; no rules or limits were relaxed.
+
+## Unreleased — terminal workspaces and remote connections
+
+React Doctor 0.9.13 was repeated with the same options for the optional spaces
+rail, connection manager, and terminal integration. It reports the same four
+reviewed `Worktrees.tsx` false positives and 58 advisory warnings. Five warnings
+were added: complexity in `ConnectionForm`, and complexity/size in
+`TerminalPanel` and `TerminalPane`. These components remain within the mandatory
+500-line budget. Connection validation, persistence, and native SSH construction
+have separate ownership; the panel composes the views without moving or
+recreating live terminals. Browser and native lifetime checks cover that
+boundary. The findings are retained as maintainability advice, with no rule
+suppression or budget changes.
+
 ## 0.1.21 follow-up
 
 The same pinned audit was repeated for the terminal fitting change: four
@@ -39,10 +62,9 @@ worktree workflows.
 Warnings remain for accessibility of dismissing overlays, larger view functions,
 effect-driven adapter state, render helpers and small iteration/formatting
 optimizations. This is an advisory report, not a claim of zero findings. The
-monorepo-derived mandatory lint, type, size and dependency checks are separate
-and pass without exemptions. Splitting code changes the checker’s warning
-locations and counts; warnings should be reviewed by behavior rather than hidden
-to reach a score.
+mandatory lint, type, size and dependency checks are separate and pass without
+exemptions. Splitting code changes the checker’s warning locations and counts;
+warnings should be reviewed by behavior rather than hidden to reach a score.
 
 To repeat the audit in PowerShell:
 

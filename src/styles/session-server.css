@@ -1,0 +1,197 @@
+.session-desk {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.session-machines {
+  width: 280px;
+  min-width: 190px;
+  max-width: 42%;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 8px;
+}
+.session-machines header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+}
+.session-machines header strong {
+  font-size: 11px;
+}
+.session-machine {
+  margin: 8px 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.session-machine small,
+.session-agent-row small {
+  color: var(--muted);
+}
+.session-machine-actions,
+.session-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10px;
+}
+.session-machine-actions button,
+.session-machines header button,
+.session-terminal header button {
+  padding: 4px;
+  font-size: 10px;
+  color: var(--accent);
+}
+.session-workspace-name {
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+  padding: 9px 4px 5px;
+}
+.session-agent-row {
+  margin-left: 8px;
+  padding: 4px;
+  border-left: 2px solid var(--border);
+}
+.session-agent-row > button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+}
+.session-agent-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.session-state {
+  font-size: 10px;
+  color: var(--muted);
+}
+.session-state.blocked {
+  color: #e7ad69;
+}
+.session-state.working {
+  color: #82b8e6;
+}
+.session-state.idle,
+.session-state.done {
+  color: var(--accent);
+}
+.session-state.offline {
+  color: var(--muted);
+}
+.session-stage {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.session-stage .terminal-grid {
+  flex: 1;
+  min-height: 0;
+}
+.session-disconnected {
+  padding: 20px;
+  color: var(--muted);
+}
+.session-forms details {
+  border-top: 1px solid var(--border);
+  padding: 8px 0;
+}
+.session-forms summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--accent);
+}
+.session-forms form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 9px;
+}
+.session-forms label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+}
+.session-forms input,
+.session-forms select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  background: var(--elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.session-forms .session-checkbox {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.session-forms input[type="checkbox"] {
+  width: auto;
+}
+.session-forms p {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.session-error {
+  color: #e78787;
+  font-size: 11px;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+.session-error button {
+  margin-left: 8px;
+  text-decoration: underline;
+}
+.session-stop-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px;
+  background: var(--elevated);
+  font-size: 12px;
+}
+.session-terminal .pane-footer {
+  white-space: nowrap;
+  overflow: hidden;
+}
+.session-terminal .pane-footer span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-terminal .pane-header {
+  flex-wrap: wrap;
+  min-height: 34px;
+  height: auto;
+}
+.session-machines {
+  scrollbar-color: transparent transparent;
+}
+.session-machines:hover,
+.session-machines:focus-within {
+  scrollbar-color: var(--border) transparent;
+}
+.session-machines::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.session-machines:hover::-webkit-scrollbar-thumb,
+.session-machines:focus-within::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+.terminal-view-server .terminal-view-select {
+  width: 155px;
+}

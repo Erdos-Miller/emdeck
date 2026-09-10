@@ -9,6 +9,9 @@ export const test = base.extend<{ desktop: void }>({
         let callbackId = 0;
         const callbacks = new Map<number, (event: unknown) => unknown>();
         const listeners = new Map<string, number>();
+        const terminals = new Map<string, { onmessage: (event: unknown) => void }>();
+        state.__emdeckEmitTerminal = (id: string, event: unknown) =>
+          terminals.get(id)?.onmessage(event);
         state.isTauri = true;
         state.__emdeckCalls = calls;
         state.__emdeckStartup = JSON.parse(
@@ -115,7 +118,13 @@ export const test = base.extend<{ desktop: void }>({
                 return (state.__emdeckDiffs as Record<string, string> | undefined)?.[key] ?? '';
               }
               case 'terminal_spawn':
-                return 'pty-0';
+              case 'terminal_connect_remote': {
+                if (command === 'terminal_connect_remote' && state.__emdeckRemoteError)
+                  throw state.__emdeckRemoteError;
+                const id = `pty-${terminals.size}`;
+                terminals.set(id, args.onEvent as { onmessage: (event: unknown) => void });
+                return id;
+              }
               case 'plugin:event|listen':
                 listeners.set(String(args.event), Number(args.handler));
                 if (args.event === 'tauri://close-requested') state.__emdeckCloseReady = true;

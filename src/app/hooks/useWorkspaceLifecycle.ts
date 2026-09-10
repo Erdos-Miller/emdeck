@@ -127,7 +127,7 @@ export function useWorkspaceLifecycle({
                 (hasUnsavedFiles(latest.current.files) || latest.current.panes.length > 0) &&
                 !(await confirm(
                   'Close this Emdeck window?',
-                  'Unsaved edits in this window will be discarded and its terminal sessions will end. Other Emdeck windows will stay open.',
+                  'Unsaved edits in this window will be discarded. Local terminals will end and remote connections will disconnect. Other Emdeck windows will stay open.',
                   'Close window',
                   true
                 ))
