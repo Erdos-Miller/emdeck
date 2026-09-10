@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { native } from '../../platform/desktop/api';
+import type { SshProfile } from '../../shared/contracts/remote';
 import type {
   AgentObservation,
   AgentUsage,
@@ -49,7 +50,7 @@ export function useTerminalActions({
   setPaneStates,
   setPaneFocus,
 }: Dependencies) {
-  const addPane = (name: string, command = '', cwd = '') => {
+  const addPane = (name: string, command = '', cwd = '', remote?: SshProfile) => {
     if (!project) {
       notify('Open a project folder first.');
       return false;
@@ -68,6 +69,7 @@ export function useTerminalActions({
         shell: settings.shell,
         color: colors[ps.length % colors.length],
         startedAt: Date.now(),
+        remote,
       },
     ]);
     setTerminalVisible(true);
@@ -106,14 +108,23 @@ export function useTerminalActions({
       state !== 'exited' &&
       state !== 'error' &&
       !(await confirm(
-        `Close ${pane.name}?`,
-        'This will terminate the terminal session and its attached process.',
-        'Close terminal',
+        `${pane.remote ? 'Disconnect' : 'Close'} ${pane.name}?`,
+        pane.remote
+          ? pane.remote.target.backend === 'shell'
+            ? 'Close this SSH connection. Processes in an ordinary remote shell may stop.'
+            : 'Detach this SSH client. The existing remote multiplexer session keeps running.'
+          : 'This will terminate the terminal session and its attached process.',
+        pane.remote ? 'Disconnect' : 'Close terminal',
         true
       ))
     )
       return;
     setPanes(ps => ps.filter(p => p.id !== pane.id));
+    setPaneStates(previous => {
+      const next = { ...previous };
+      delete next[pane.id];
+      return next;
+    });
     setAgentUsage(value => {
       const next = { ...value };
       delete next[pane.id];

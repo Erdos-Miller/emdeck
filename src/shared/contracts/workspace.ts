@@ -1,3 +1,5 @@
+import type { SshProfile } from './remote';
+
 export interface Project {
   root: string;
   name: string;
@@ -121,6 +123,7 @@ export interface Pane {
   startedAt?: number;
   endedAt?: number;
   restart?: number;
+  remote?: SshProfile;
 }
 export type Layout = 'columns' | 'rows' | 'grid';
 export interface Settings {

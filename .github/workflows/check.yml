@@ -1,8 +1,9 @@
 name: Check Emdeck
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
+    branches: [dev]
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -60,12 +61,13 @@ jobs:
       - run: bun run release:check
       - run: bun run test:unit
       - run: bun run test:integration
-      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
-      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --workspace --locked
       - name: Verify optimized GLib iterator backport
         if: runner.os == 'Linux'
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked --release --test glib_iterator
-      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --locked -- -D warnings
+      - run: cargo build --manifest-path src-tauri/Cargo.toml -p emdeck-session --release --locked
       - name: Install browser
         if: runner.os != 'Windows'
         run: bunx playwright install --with-deps chromium

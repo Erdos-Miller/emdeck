@@ -6,12 +6,20 @@ use state::Projects;
 use tauri::Manager;
 
 pub fn run() {
+    if std::env::args().nth(1).as_deref() == Some("session") {
+        if let Err(error) = emdeck_session::cli::run(std::env::args().skip(2).collect(), true) {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     if agent_usage::report_cli() {
         return;
     }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Projects::default())
+        .manage(services::sessions::Sessions::default())
         .manage(codex_usage::UsageCache::default())
         .manage(terminal::WindowTerminals::default())
         .setup(|app| {
@@ -24,6 +32,10 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 window
                     .app_handle()
+                    .state::<services::sessions::Sessions>()
+                    .close_window(window.label());
+                window
+                    .app_handle()
                     .state::<Projects>()
                     .forget(window.label());
                 window
@@ -33,6 +45,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::sessions::session_connect,
+            commands::sessions::session_request,
+            commands::sessions::session_disconnect,
             commands::projects::open_project,
             commands::projects::startup_project,
             commands::projects::open_project_window,
@@ -55,6 +70,7 @@ pub fn run() {
             commands::git::git_worktree_create,
             commands::git::git_worktree_remove,
             commands::terminal::terminal_spawn,
+            commands::terminal::terminal_connect_remote,
             commands::terminal::terminal_write,
             commands::terminal::terminal_resize,
             commands::terminal::terminal_close,
