@@ -31,22 +31,41 @@ test('environment file variants render distinct token colors in all themes', asy
         .getByRole('treeitem')
         .filter({ has: page.getByText(name, { exact: true }) })
         .click();
-      const comment = editor.locator('.cm-line span').filter({ hasText: /^# Local settings$/ });
       const key = editor.locator('.cm-line span').filter({ hasText: /^APP_MODE$/ });
-      const value = editor.locator('.cm-line span').filter({ hasText: /^development$/ });
-      const keyword = editor.locator('.cm-line span').filter({ hasText: /^export$/ });
       const quoted = editor.locator('.cm-line span').filter({ hasText: /^"hello # world"$/ });
       await expect(key).toBeVisible();
       await expect(quoted).toBeVisible();
       await expect(page.locator('.statusbar')).toContainText('Dotenv');
-      const colors = await Promise.all(
-        [comment, key, value, keyword].map(token =>
-          token.evaluate(el => getComputedStyle(el).color)
+      const palette =
+        theme === 'Light'
+          ? ['rgb(126, 139, 145)', 'rgb(70, 90, 113)', 'rgb(73, 115, 51)', 'rgb(134, 83, 168)']
+          : [
+              'rgb(110, 120, 134)',
+              'rgb(189, 198, 214)',
+              'rgb(184, 207, 139)',
+              'rgb(197, 161, 233)',
+            ];
+      // A file/theme switch can replace the spans after locator visibility
+      // checks. Read the current tokens together and retry until the expected
+      // theme is painted, rather than sampling separate, potentially stale DOMs.
+      await expect
+        .poll(async () =>
+          editor.evaluate(element => {
+            const spans = Array.from(element.querySelectorAll('.cm-line span'));
+            const colors = [
+              '# Local settings',
+              'APP_MODE',
+              'development',
+              'export',
+              '"hello # world"',
+            ].map(text => {
+              const token = spans.find(span => span.textContent === text);
+              return token ? getComputedStyle(token).color : null;
+            });
+            return { colors, valueDistinct: colors[2] !== getComputedStyle(element).color };
+          })
         )
-      );
-      expect(new Set(colors).size).toBe(4);
-      expect(await quoted.evaluate(el => getComputedStyle(el).color)).toBe(colors[2]);
-      expect(colors[2]).not.toBe(await editor.evaluate(el => getComputedStyle(el).color));
+        .toEqual({ colors: [...palette, palette[2]], valueDistinct: true });
     }
     await page.screenshot({ path: testInfo.outputPath(`dotenv-${theme.toLowerCase()}.png`) });
   }
