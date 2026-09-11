@@ -63,6 +63,11 @@ access. The actual desktop app starts with an Open Project screen.
 | Appearance      | Dark, Light and Graphite themes, custom accent, editor/terminal font sizes, terminal scrollback, sidebar width and terminal layout persistence                                                                                                                                                                                                                         |
 | Platforms       | Windows, macOS and Linux implementations and CI workflows; see validation notes below                                                                                                                                                                                                                                                                                  |
 
+Environment files (`.env`, `.env.*`, and `*.env`) have syntax highlighting for
+keys, values, comments, export prefixes and quoted multiline values. The status
+bar identifies them as **Dotenv**. Highlighting uses only the open buffer and
+works in every theme.
+
 Terminals use CLIs you have already installed and authenticated. Emdeck does not
 bundle agents or require its own AI account. Run configurations execute through
 the configured shell and are never launched merely by opening a project.

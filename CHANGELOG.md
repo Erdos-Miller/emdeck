@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Launch Windows debug builds as desktop applications without an extra console
+  window whose Close button also terminates the IDE.
+- Highlight environment files (`.env`, `.env.*`, and `*.env`), including keys,
+  values, comments, export prefixes and quoted multiline values in every theme.
 - Give the Windows Bun shell smoke test a bounded 60-second process budget and
   report launch errors, timeout details and captured output instead of a null
   exit-status assertion. Missing Bun now fails this required integration check.
