@@ -1,5 +1,14 @@
 # React audit — 0.1.19
 
+## Unreleased — agent activity accuracy
+
+The pinned 0.9.13 audit retains four reviewed Worktrees errors and 62 advisory
+warnings, with no new rule/file/message findings. Activity tracking belongs to
+the existing terminal effect and receives parsed screen and input events. It
+adds no polling, mount dependencies or persisted transcripts. Synthetic browser
+tests cover soft wraps, tall screens, submission before repaint, uncertain
+composers, completion and terminal continuity. No rules were suppressed.
+
 ## Unreleased — workspace session statuses
 
 The pinned 0.9.13 audit retains the same four reviewed Worktrees errors and 62

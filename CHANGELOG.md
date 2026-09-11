@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix false Ready statuses while agents are working: recognize changing spinner
+  labels, tall live screens and wrapped controls; invalidate stale prompts on
+  submission, and report uncertain activity instead of guessing completion.
 - Highlight workspace session states with colored borders, icons and readable
   badges. Distinguish approval requests from detected questions waiting for an
   answer, and include both in the attention count and filter.

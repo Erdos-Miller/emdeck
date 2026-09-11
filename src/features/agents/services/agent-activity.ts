@@ -4,6 +4,35 @@ const emptyPrompt = /^\s*[❯›>]\s*$/;
 const directQuestion =
   /^(?:[●•]\s*)?(?:which|what|how|where|when|who|why|should|shall|would|could|can|do|does|is|are|will)\b[^\n]*\?\s*$/i;
 const separator = /^[\s─━═╌┄┈╭╮╰╯│┌┐└┘├┤┬┴┼]+$/;
+const lastIndex = (lines: string[], match: (line: string) => boolean): number => {
+  for (let index = lines.length - 1; index >= 0; index--) {
+    if (match(lines[index])) return index;
+  }
+  return -1;
+};
+
+export const agentScreenTail = (lines: string[]): string[] => {
+  let end = lines.length;
+  while (end && !lines[end - 1].trim()) end--;
+  return lines.slice(Math.max(0, end - 128), end);
+};
+
+const workingIndicator = (line: string) =>
+  /(?:esc(?:ape)?|ctrl\s*\+\s*c)\s+to\s+(?:interrupt|stop)|(?:thinking|working|generating|running|pondering|crafting|reasoning)(?:…|\.\.\.)/i.test(
+    line
+  ) ||
+  /^\s*[✢✳✶✻✽✺·*⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s+\S[^\n]*(?:…|\.\.\.)(?:\s*\([^\n]*\))?\s*$/.test(line) ||
+  /^\s*(?:[•●◦]\s*)?(?:Working|Thinking|Running|Reconnecting|Compacting)\b[^\n]*\(\d+[hms][^\n]*\)\s*$/i.test(
+    line
+  );
+
+// Completion rows are stronger evidence than a composer: agents can keep their
+// composer visible during a turn. Return the row itself to reject old markers.
+const completionIndicator = (line: string) =>
+  /^\s*(?:[✢✳✶✻✽✺·*]|[─━═]+)\s*(?:[A-Za-z]+ed|Worked) for \d+[hms]\b/i.test(line);
+
+export const agentCompletion = (lines: string[]): string =>
+  agentScreenTail(lines).filter(completionIndicator).join('\n');
 
 // Inspect only the current screen tail. A question mark in logs or older
 // conversation is not sufficient evidence that the agent is awaiting input.
@@ -12,7 +41,8 @@ export const detectAgentActivity = (
   lines: string[]
 ): AgentObservation['activity'] => {
   if (kind === 'shell' || kind === 'custom') return 'unknown';
-  const tail = lines.slice(-16);
+  const live = agentScreenTail(lines);
+  const tail = live.slice(-16);
   const bottom = tail.join('\n');
   let prompt = -1;
   for (let index = tail.length - 1; index >= 0; index--) {
@@ -30,14 +60,7 @@ export const detectAgentActivity = (
     /enter to (?:select|submit|confirm)|(?:↑|↓|arrow keys).*select|(?:^|\n)\s*[❯›>]\s*\d+[.)]/i.test(
       bottom
     );
-  if (
-    /esc(?:ape)? to interrupt|(?:thinking|working|generating|running|pondering|crafting|reasoning)…|(?:thinking|working|generating)\.\.\./i.test(
-      bottom
-    ) ||
-    (!questionPicker && /esc(?:ape)? to cancel/i.test(bottom))
-  )
-    return 'working';
-  if (
+  const approval =
     /press enter to approve/i.test(bottom) ||
     (!questionPicker && /press enter to confirm/i.test(bottom)) ||
     (/do you want to (?:allow|proceed)|would you like to (?:run|approve)|allow (?:once|this|claude)|requires? (?:your )?approval|permission (?:required|request)/i.test(
@@ -45,11 +68,23 @@ export const detectAgentActivity = (
     ) &&
       /(?:^|\n)\s*[❯›>]?\s*(?:[1-9][.)]\s*)?(?:yes|no|allow once|allow always|deny|approve once)\b|\[y\/n\]/i.test(
         bottom
-      ))
-  )
-    return 'attention';
+      ));
+  const workingRow = lastIndex(live, workingIndicator);
+  const completionRow = lastIndex(live, completionIndicator);
+  const controlRow =
+    approval || questionPicker
+      ? lastIndex(
+          live,
+          line =>
+            /^\s*[❯›>]?\s*\d+[.)]\s+\S/.test(line) ||
+            /press enter to (?:approve|confirm)/i.test(line)
+        )
+      : -1;
+  if (workingRow > Math.max(completionRow, controlRow)) return 'working';
+  if (approval) return 'attention';
 
   if (questionPicker) return 'question';
+  if (/esc(?:ape)? to cancel/i.test(bottom)) return 'working';
 
   if (prompt >= 0 && emptyPrompt.test(tail[prompt])) {
     const preceding = tail.slice(0, prompt).filter(line => line.trim() && !separator.test(line));
@@ -72,7 +107,7 @@ export const detectAgentActivity = (
         ))
     )
       return 'question';
-    return 'ready';
+    return activePrompt ? 'ready' : 'unknown';
   }
-  return /\? for shortcuts|send a message|type your message/i.test(bottom) ? 'ready' : 'unknown';
+  return 'unknown';
 };

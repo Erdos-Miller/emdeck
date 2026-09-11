@@ -9,6 +9,7 @@ export type SessionStatusKind =
   | 'ready'
   | 'output'
   | 'connected'
+  | 'unknown'
   | 'starting'
   | 'exited'
   | 'error'
@@ -28,13 +29,16 @@ export const sessionStatus = (
     else if (observation?.activity === 'question') kind = 'question';
     else if (observation?.activity === 'working' || observation?.activity === 'ready')
       kind = observation.activity;
+    else if (observation?.activity === 'unknown') kind = 'unknown';
     else if (state === 'output') kind = 'output';
   }
   const descriptions: Record<SessionStatusKind, string> = {
     approval: 'An approval prompt was detected. Open this session to review it.',
     question: 'A question awaiting your answer was detected. Open this session to reply.',
-    working: 'The agent appears to be working, based on its current terminal screen.',
+    working: 'A task was submitted or a work indicator was detected; no completion is confirmed.',
     ready: 'The agent appears ready for a new message; no pending question was detected.',
+    unknown:
+      'The current terminal screen does not confirm whether the agent is working or ready. Open the session to check.',
     output: 'Recent terminal output; the agent’s activity is not known.',
     connected: 'The terminal is connected; the agent’s activity is not known.',
     starting: 'The terminal is starting.',

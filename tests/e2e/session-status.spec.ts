@@ -147,3 +147,68 @@ test('attention includes questions and approvals and clears when agents resume o
   expect(calls.filter(call => call.command === 'terminal_spawn')).toHaveLength(4);
   expect(calls.filter(call => call.command === 'terminal_close')).toHaveLength(0);
 });
+
+test('live work above the composer stays visible in status across tall screens, soft wraps and output pauses', async ({
+  page,
+}) => {
+  await page.getByLabel('Terminal view').selectOption('workspaces');
+  await page.getByTitle('Expand terminals', { exact: true }).click();
+  await launch(page, 0, 'Live work');
+  const row = page
+    .getByRole('complementary', { name: 'Terminal workspaces' })
+    .getByTitle('Focus Live work', { exact: true });
+  await screen(page, 0, '❯');
+  await expect(row).toContainText('Ready');
+  const cols = await page.evaluate(() => {
+    const calls = (
+      window as unknown as { __emdeckCalls: { command: string; args: { cols: number } }[] }
+    ).__emdeckCalls;
+    return calls.filter(call => call.command === 'terminal_resize').at(-1)!.args.cols;
+  });
+  // Split the interrupt label at a real xterm soft wrap, without a known verb.
+  await screen(page, 0, `${' '.repeat(cols - 3)}esc to interrupt\r\n❯`);
+  await expect(row).toContainText('Working');
+  await screen(page, 0, '✻ Cooked for 2s\r\n❯');
+  await expect(row).toContainText('Ready');
+  await emit(page, 0, {
+    type: 'data',
+    data: [...new TextEncoder().encode('\x1b[2J\x1b[H✻ Channelling…\r\n❯\r\n? for shortcuts')],
+  });
+  await expect(row).toContainText('Working');
+  await screen(page, 0, `✢ Percolating…${'\r\n'.repeat(19)}❯\r\n? for shortcuts`);
+  await expect(row).toContainText('Working');
+  // The connection's output timer expires, but that does not complete a task.
+  await page.waitForTimeout(1700);
+  await expect(row).toContainText('Working');
+  await screen(page, 0, 'Tool output still streaming');
+  await expect(row).toContainText('Working');
+  await screen(page, 0, 'Intermediate response\r\n❯\r\n? for shortcuts');
+  await expect(row).toContainText('Activity unknown');
+  await screen(page, 0, 'Implemented the change.\r\n✻ Cooked for 12s\r\n❯');
+  await expect(row).toContainText('Ready');
+});
+
+test('submitting a task clears Ready before the agent repaints without remounting the terminal', async ({
+  page,
+}) => {
+  await page.getByLabel('Terminal view').selectOption('workspaces');
+  await page.getByTitle('Expand terminals', { exact: true }).click();
+  await launch(page, 0, 'Submitting');
+  const row = page
+    .getByRole('complementary', { name: 'Terminal workspaces' })
+    .getByTitle('Focus Submitting', { exact: true });
+  await screen(page, 0, '✻ Cooked for 5s\r\n❯\r\n? for shortcuts');
+  await expect(row).toContainText('Ready');
+  await page.locator('.xterm').evaluate(element => element.setAttribute('data-preserved', 'yes'));
+  await page.locator('.xterm-helper-textarea').focus();
+  await page.keyboard.type('Implement the feature');
+  await page.keyboard.press('Enter');
+  await expect(row).toContainText('Working');
+  await screen(page, 0, '✻ Cooked for 5s\r\n❯\r\n? for shortcuts');
+  await expect(row).toContainText('Working');
+  await screen(page, 0, '✻ Channelling…\r\n❯');
+  await expect(row).toContainText('Working');
+  await screen(page, 0, 'Done.\r\n✻ Cooked for 15s\r\n❯');
+  await expect(row).toContainText('Ready');
+  await expect(page.locator('.xterm[data-preserved="yes"]')).toHaveCount(1);
+});

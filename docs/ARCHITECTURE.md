@@ -178,7 +178,7 @@ Draft cleanup clears the guard when the resolver unmounts.
 The optional terminal workspace rail filters the existing pane tree; its xterm
 instances retain stable parents and keys. Saved remote profiles and view
 preferences are explicit UI state. The pure agent-activity service inspects a
-bounded live-screen tail for working, approval, question and ready cues; no
+bounded live viewport for working, approval, question and ready cues; no
 transcript scan or background poll is added. Sidebar status presentation keeps
 connection states distinct from detected activity and includes approvals and
 questions in the attention filter. Theme-specific colors, icons and labels
@@ -191,6 +191,15 @@ never evaluated by a local shell. Remote panes do not start local provider usage
 probes. Browser-provider profiles dispatch only an explicitly requested HTTPS
 URL through the existing external-URL command. See
 [Remote sessions](REMOTE-SESSIONS.md) for capabilities and boundaries.
+
+Desktop activity inspection reads at most 256 live physical rows, joins xterm
+soft wraps, and removes trailing blank screen space before classifying a bounded
+tail. A per-process domain tracker invalidates old prompt evidence on
+submission. Silence cannot complete a task; a new completion marker and active
+prompt can. Ambiguous composers during a turn report unknown activity. The
+tracker is owned by the existing terminal lifetime, receives only screen/input
+events, and stores no transcripts on disk. Pane exit/error state retains
+presentation priority.
 
 Style imports retain their original cascade order. Responsive overrides load
 last. Shared scrollbar styles belong in `styles/scrollbars.css`: containers use

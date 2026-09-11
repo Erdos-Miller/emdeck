@@ -18,6 +18,7 @@ const icons = {
   ready: Check,
   output: Ellipsis,
   connected: Plug,
+  unknown: CircleHelp,
   starting: Clock3,
   exited: Square,
   error: CircleX,

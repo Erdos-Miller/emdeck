@@ -87,6 +87,7 @@ export function agentStatus(state: PaneState | undefined, observation?: AgentObs
     return { label: 'Waiting for answer · detected', tone: 'attention' };
   if (observation?.activity === 'working') return { label: 'Working · detected', tone: 'working' };
   if (observation?.activity === 'ready') return { label: 'Ready · detected', tone: 'ready' };
+  if (observation?.activity === 'unknown') return { label: 'Activity unknown', tone: 'muted' };
   return state === 'output'
     ? { label: 'Output', tone: 'working' }
     : { label: 'Connected', tone: 'ready' };

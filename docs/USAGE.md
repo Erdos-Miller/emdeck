@@ -158,12 +158,17 @@ are configurable. These preferences persist across projects and restarts.
   Unsupported metrics say **Not reported**; missing quotas are never treated as
   zero usage.
 
-Agent activity is a heuristic observation of the live terminal's bottom rows,
-with detected labels and explanatory tooltips. Approval prompts with
-confirmation choices are highlighted for attention. Recognizable question
+Agent activity is a heuristic observation of the live terminal screen, with
+detected labels and explanatory tooltips. It recognizes working indicators above
+the input box, including changing spinner labels and wrapped controls.
+Submitting a task clears the previous Ready status immediately; pauses in output
+do not mean a task has finished. After work starts, a new recognized completion
+row and input prompt can establish Ready. An ambiguous input box shows
+**Activity unknown**, rather than promising the agent is idle. Approval prompts
+with confirmation choices are highlighted for attention. Recognizable question
 pickers and direct English questions immediately before an empty input prompt
 can show **Waiting for answer**. This is an estimate from terminal text, so
-unfamiliar layouts, wrapped questions and other languages can be missed. SSH
+unfamiliar layouts, completion messages and other languages can be missed. SSH
 rows show connection status only. Terminal output alone does not prove an agent
 is working. Readings show their source and time; expired quota windows ask for
 refresh. Only allowlisted Claude metrics are retained in a temporary per-session
