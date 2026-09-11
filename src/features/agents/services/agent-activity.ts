@@ -1,4 +1,6 @@
 import type { AgentKind, AgentObservation } from '../../../shared/contracts/workspace';
+import { codexCompletion, codexScreenActivity } from './codex-activity';
+import { isAgentCompletion } from './agent-completion';
 
 const emptyPrompt = /^\s*[❯›>]\s*$/;
 const directQuestion =
@@ -26,14 +28,6 @@ const workingIndicator = (line: string) =>
     line
   );
 
-// Completion rows are stronger evidence than a composer: agents can keep their
-// composer visible during a turn. Return the row itself to reject old markers.
-const completionIndicator = (line: string) =>
-  /^\s*(?:[✢✳✶✻✽✺·*]|[─━═]+)\s*(?:[A-Za-z]+ed|Worked) for \d+[hms]\b/i.test(line);
-
-export const agentCompletion = (lines: string[]): string =>
-  agentScreenTail(lines).filter(completionIndicator).join('\n');
-
 // Inspect only the current screen tail. A question mark in logs or older
 // conversation is not sufficient evidence that the agent is awaiting input.
 export const detectAgentActivity = (
@@ -42,6 +36,8 @@ export const detectAgentActivity = (
 ): AgentObservation['activity'] => {
   if (kind === 'shell' || kind === 'custom') return 'unknown';
   const live = agentScreenTail(lines);
+  const codex = kind === 'codex' ? codexScreenActivity(live) : undefined;
+  if (codex === 'question' || codex === 'attention') return codex;
   const tail = live.slice(-16);
   const bottom = tail.join('\n');
   let prompt = -1;
@@ -69,8 +65,15 @@ export const detectAgentActivity = (
       /(?:^|\n)\s*[❯›>]?\s*(?:[1-9][.)]\s*)?(?:yes|no|allow once|allow always|deny|approve once)\b|\[y\/n\]/i.test(
         bottom
       ));
-  const workingRow = lastIndex(live, workingIndicator);
-  const completionRow = lastIndex(live, completionIndicator);
+  const workingRow = lastIndex(
+    live,
+    line =>
+      workingIndicator(line) && !(kind === 'codex' && /\bto submit (?:answer|all)\b/i.test(line))
+  );
+  const completionRow = lastIndex(
+    live,
+    line => isAgentCompletion(line) || (kind === 'codex' && !!codexCompletion([line]))
+  );
   const controlRow =
     approval || questionPicker
       ? lastIndex(
@@ -89,16 +92,18 @@ export const detectAgentActivity = (
   if (prompt >= 0 && emptyPrompt.test(tail[prompt])) {
     const preceding = tail.slice(0, prompt).filter(line => line.trim() && !separator.test(line));
     const lastMessage = preceding.at(-1)?.trim() ?? '';
-    const activePrompt = tail
-      .slice(prompt + 1)
-      .every(
-        line =>
-          !line.trim() ||
-          separator.test(line) ||
-          /\? for shortcuts|context|shift\+tab|ctrl\+|bypass permissions|auto mode|accept edits/i.test(
-            line
-          )
-      );
+    const activePrompt =
+      codex === 'ready' ||
+      tail
+        .slice(prompt + 1)
+        .every(
+          line =>
+            !line.trim() ||
+            separator.test(line) ||
+            /\? for shortcuts|context|shift\+tab|ctrl\+|bypass permissions|auto mode|accept edits/i.test(
+              line
+            )
+        );
     if (
       activePrompt &&
       (directQuestion.test(lastMessage) ||

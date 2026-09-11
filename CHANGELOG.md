@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Clear Claude's Working state when its foreground turn completes, including
+  modern done footers with background shells, custom status lines and unsent
+  drafts. Retained completion history cannot finish a newly submitted task.
+- Stabilize the dotenv color regression check across file/theme switches by
+  waiting for one consistent snapshot of the expected theme's token colors.
+- Track Codex workspace activity through its terminal-title updates, retaining
+  Working during streaming and detecting completion, approval requests and
+  freeform or multi-step questions. Recognize dimmed composer placeholders and
+  stop treating Codex's pre-answer divider as completion.
+- Keep selected session titles, outlines and backgrounds consistent with their
+  activity color, including keyboard focus, instead of the global green accent.
 - Fix false Ready statuses while agents are working: recognize changing spinner
   labels, tall live screens and wrapped controls; invalidate stale prompts on
   submission, and report uncertain activity instead of guessing completion.

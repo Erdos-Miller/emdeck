@@ -195,11 +195,25 @@ URL through the existing external-URL command. See
 Desktop activity inspection reads at most 256 live physical rows, joins xterm
 soft wraps, and removes trailing blank screen space before classifying a bounded
 tail. A per-process domain tracker invalidates old prompt evidence on
-submission. Silence cannot complete a task; a new completion marker and active
-prompt can. Ambiguous composers during a turn report unknown activity. The
-tracker is owned by the existing terminal lifetime, receives only screen/input
-events, and stores no transcripts on disk. Pane exit/error state retains
-presentation priority.
+submission. Silence cannot complete a task. Claude's new completion row can
+finish its foreground turn even with a custom footer, cropped composer, unsent
+draft or running background shells. Completion identity excludes decorative
+glyphs and background-shell counts; repeated occurrences are tracked so a new
+equal-duration turn can finish without accepting retained history after submit.
+Ambiguous composers during a turn report unknown activity. The tracker is owned
+by the existing terminal lifetime, receives only screen/input events, and stores
+no transcripts on disk. Pane exit/error state retains presentation priority.
+
+Codex uses a provider-specific domain tracker that also receives OSC title
+events from the existing xterm instance. The default activity prefix and its
+removal from the same title provide working/idle evidence without polling or
+changing provider configuration. Action-required titles are refined by the
+current approval/question controls. A typed optional cell-attribute port lets
+screen extraction distinguish Codex's dim placeholder from a draft or disabled
+composer. Older pre-answer dividers cannot finish a turn; without title
+evidence, only a fresh final completion footer can. The same bounded screen and
+process lifetime constraints apply. This adapter does not change the independent
+background-session server or infer remote activity from SSH output.
 
 Style imports retain their original cascade order. Responsive overrides load
 last. Shared scrollbar styles belong in `styles/scrollbars.css`: containers use

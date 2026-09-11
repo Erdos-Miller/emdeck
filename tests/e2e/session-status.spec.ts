@@ -85,6 +85,7 @@ for (const theme of ['Dark', 'Light', 'Graphite']) {
         return {
           color: style.color,
           border: getComputedStyle(element.closest('button')!).borderLeftColor,
+          title: getComputedStyle(element.closest('button')!.querySelector('strong')!).color,
           contrast:
             (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
           fits:
@@ -97,12 +98,38 @@ for (const theme of ['Dark', 'Light', 'Graphite']) {
     for (const color of colors) {
       expect(color.contrast).toBeGreaterThanOrEqual(4.5);
       expect(color.border).toBe(color.color);
+      expect(color.title).toBe(color.color);
       expect(color.fits).toBe(true);
     }
     await expect(badges.locator('svg')).toHaveCount(4);
     await expect(rail.getByLabel('2 sessions need attention')).toBeVisible();
+    for (const title of ['Architecture', 'Permissions', 'Review', 'Building']) {
+      const row = rail.getByTitle(`Focus ${title}`, { exact: true });
+      await row.click();
+      await expect(row).toHaveAttribute('aria-pressed', 'true');
+      // Selection and keyboard focus must not restore the global green accent.
+      await page.keyboard.press('Tab');
+      await row.focus();
+      const selected = await row.evaluate(element => ({
+        focused: element.matches(':focus-visible'),
+        badge: getComputedStyle(element.querySelector('.rail-status')!).color,
+        title: getComputedStyle(element.querySelector('strong')!).color,
+        dot: getComputedStyle(element.querySelector('i')!).backgroundColor,
+        border: getComputedStyle(element).borderLeftColor,
+        outline: getComputedStyle(element).outlineColor,
+      }));
+      expect(selected.focused).toBe(true);
+      expect(selected.title).toBe(selected.badge);
+      expect(selected.dot).toBe(selected.badge);
+      expect(selected.border).toBe(selected.badge);
+      expect(selected.outline).toBe(selected.badge);
+    }
+    await page.mouse.move(0, 0);
     await rail.screenshot({
       path: testInfo.outputPath(`session-status-${theme.toLowerCase()}.png`),
+    });
+    await rail.getByTitle('Focus Building', { exact: true }).screenshot({
+      path: testInfo.outputPath(`selected-working-${theme.toLowerCase()}.png`),
     });
   });
 }
@@ -211,4 +238,81 @@ test('submitting a task clears Ready before the agent repaints without remountin
   await screen(page, 0, 'Done.\r\n✻ Cooked for 15s\r\n❯');
   await expect(row).toContainText('Ready');
   await expect(page.locator('.xterm[data-preserved="yes"]')).toHaveCount(1);
+});
+
+test('Claude completion clears Working with background shells and an unsent composer draft', async ({
+  page,
+}) => {
+  await page.getByLabel('Terminal view').selectOption('workspaces');
+  await page.getByTitle('Expand terminals', { exact: true }).click();
+  await launch(page, 0, 'Completed task');
+  const row = page
+    .getByRole('complementary', { name: 'Terminal workspaces' })
+    .getByTitle('Focus Completed task', { exact: true });
+  const terminal = page.getByRole('region', { name: 'Completed task terminal', exact: true });
+  await screen(page, 0, '✻ Channelling… (3m · esc to interrupt)\r\n❯');
+  await expect(row).toContainText('Working');
+  await terminal
+    .locator('.xterm')
+    .evaluate(element => element.setAttribute('data-preserved', 'yes'));
+  const done = '※ Worked for 3m 12s · done 10:24 · 2 shells still running';
+  const completedScreen = [
+    'Implemented the change and ran the tests.',
+    done,
+    '────',
+    '❯',
+    '────',
+    'Emdeck · Example model · 52% context',
+    'auto mode on · 2 shells · 1 agent',
+  ];
+  await screen(page, 0, completedScreen.join('\r\n'));
+  await expect(row).toContainText('Ready');
+  await expect(terminal.locator('.pane-state')).toContainText('Ready');
+  await terminal.locator('.xterm-helper-textarea').focus();
+  await page.keyboard.type('A draft for later');
+  await screen(
+    page,
+    0,
+    completedScreen.map(line => (line === '❯' ? '❯ A draft for later' : line)).join('\r\n')
+  );
+  await expect(row).toContainText('Ready');
+  await page.keyboard.press('Enter');
+  await expect(row).toContainText('Working');
+  await screen(page, 0, completedScreen.join('\r\n').replaceAll('2 shells', '1 shell'));
+  await expect(row).toContainText('Working');
+  // The next final footer must finish the new task even with an unfamiliar footer.
+  await screen(
+    page,
+    0,
+    `Implemented the next change.\r\n${done.replace('10:24', '10:25')}\r\n❯\r\nCustom footer: 2 jobs`
+  );
+  await expect(row).toContainText('Ready');
+  await expect(terminal.locator('.pane-state')).toContainText('Ready');
+  await expect(terminal.locator('.xterm[data-preserved="yes"]')).toHaveCount(1);
+});
+
+test('a wrapped Claude done footer supersedes an old working row without a visible composer', async ({
+  page,
+}) => {
+  await page.getByLabel('Terminal view').selectOption('workspaces');
+  await page.getByTitle('Expand terminals', { exact: true }).click();
+  await launch(page, 0, 'Wrapped completion');
+  const row = page
+    .getByRole('complementary', { name: 'Terminal workspaces' })
+    .getByTitle('Focus Wrapped completion', { exact: true });
+  await screen(page, 0, '✻ Channelling…\r\n❯');
+  await expect(row).toContainText('Working');
+  const cols = await page.evaluate(() => {
+    const calls = (
+      window as unknown as { __emdeckCalls: { command: string; args: { cols: number } }[] }
+    ).__emdeckCalls;
+    return calls.filter(call => call.command === 'terminal_resize').at(-1)!.args.cols;
+  });
+  await screen(
+    page,
+    0,
+    `✻ Channelling…\r\nImplemented the change.\r\n${' '.repeat(cols - 24)}✼ Worked for 3m 12s · done 10:24 · 2 shells still running`
+  );
+  await expect(row).toContainText('Ready');
+  await expect(page.locator('.pane-state')).toContainText('Ready');
 });

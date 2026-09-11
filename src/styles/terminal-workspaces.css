@@ -95,7 +95,6 @@
   color: var(--muted);
 }
 .space-button.active,
-.rail-session.active,
 .session-tabs button.active {
   background: var(--accent-soft);
   color: var(--accent-ink);
@@ -209,6 +208,9 @@
   margin-top: 3px;
   background: var(--session-status-color);
 }
+.rail-session strong {
+  color: var(--session-status-color);
+}
 .rail-session[data-status="approval"] {
   --session-status-color: var(--status-approval);
 }
@@ -229,8 +231,12 @@
   background: color-mix(in srgb, var(--session-status-color) 9%, var(--panel));
 }
 .rail-session.active {
-  outline: 1px solid var(--accent-ink);
+  background: color-mix(in srgb, var(--session-status-color) 12%, var(--panel));
+  outline: 1px solid var(--session-status-color);
   outline-offset: -1px;
+}
+.rail-session:focus-visible {
+  outline-color: var(--session-status-color);
 }
 .rail-session:hover {
   background: color-mix(in srgb, var(--session-status-color) 12%, var(--hover));

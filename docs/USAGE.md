@@ -107,11 +107,13 @@ The terminal toolbar also offers an optional **Workspaces** view: spaces grouped
 by working folder or remote connection, session tabs, and attention filtering.
 Session rows use amber for **Needs approval**, purple for **Waiting for
 answer**, blue for **Working** or recent **Output**, green for **Ready**, red
-for **Error**, and neutral colors for connection and lifecycle states. Icons and
-text identify each state alongside the color. The **Needs attention** count and
-filter include both approvals and questions; click a row to open its terminal
-and respond. Use the monitor button to configure cmux TUI, tmux, SSH commands,
-or provider session links. Connections are always explicit. See
+for **Error**, and neutral colors for connection and lifecycle states. A
+selected row keeps its activity color in the title, outline and tinted
+background, including keyboard focus. Icons and text identify each state
+alongside the color. The **Needs attention** count and filter include both
+approvals and questions; click a row to open its terminal and respond. Use the
+monitor button to configure cmux TUI, tmux, SSH commands, or provider session
+links. Connections are always explicit. See
 [Terminal workspaces and remote sessions](REMOTE-SESSIONS.md) for setup,
 disconnect behavior, and which integrations run inside Emdeck or in a browser.
 
@@ -158,23 +160,39 @@ are configurable. These preferences persist across projects and restarts.
   Unsupported metrics say **Not reported**; missing quotas are never treated as
   zero usage.
 
-Agent activity is a heuristic observation of the live terminal screen, with
-detected labels and explanatory tooltips. It recognizes working indicators above
-the input box, including changing spinner labels and wrapped controls.
-Submitting a task clears the previous Ready status immediately; pauses in output
-do not mean a task has finished. After work starts, a new recognized completion
-row and input prompt can establish Ready. An ambiguous input box shows
-**Activity unknown**, rather than promising the agent is idle. Approval prompts
-with confirmation choices are highlighted for attention. Recognizable question
-pickers and direct English questions immediately before an empty input prompt
-can show **Waiting for answer**. This is an estimate from terminal text, so
-unfamiliar layouts, completion messages and other languages can be missed. SSH
-rows show connection status only. Terminal output alone does not prove an agent
-is working. Readings show their source and time; expired quota windows ask for
-refresh. Only allowlisted Claude metrics are retained in a temporary per-session
-file, removed when the terminal reader exits. No transcripts or credentials are
-copied into the overview. Browser preview sessions remain explicitly marked as
-previews.
+Agent activity is an observation of the live terminal screen, with detected
+labels and explanatory tooltips. It recognizes working indicators above the
+input box, including changing spinner labels and wrapped controls. Submitting a
+task clears the previous Ready status immediately; pauses in output do not mean
+a task has finished. Claude's new completion row, including **Worked for … ·
+done …**, establishes **Ready** even if background shells are still running or
+you have an unsent draft. An old completion row cannot finish a newly submitted
+task. An ambiguous input box shows **Activity unknown**, rather than promising
+the agent is idle. Approval prompts with confirmation choices are highlighted
+for attention. Recognizable question pickers and direct English questions
+immediately before an empty input prompt can show **Waiting for answer**. This
+is an estimate from terminal text, so unfamiliar layouts, completion messages
+and other languages can be missed. SSH rows show connection status only.
+Terminal output alone does not prove an agent is working. Readings show their
+source and time; expired quota windows ask for refresh. Only allowlisted Claude
+metrics are retained in a temporary per-session file, removed when the terminal
+reader exits. No transcripts or credentials are copied into the overview.
+Browser preview sessions remain explicitly marked as previews.
+
+Codex workspace terminals also read the default **activity** title indicator.
+They stay **Working** while the answer streams, even when Codex hides its
+working row, and return to **Ready** when Codex removes that indicator from the
+same title. Codex question forms (including freeform and multiple questions)
+show **Waiting for answer**; command, edit and permission confirmations show
+**Needs approval**. Dimmed prompt suggestions are recognized separately from
+typed text. Emdeck does not change Codex settings or install hooks for this
+integration. If a custom title disables activity, animations are disabled, or an
+older Codex version does not emit these updates, screen detection remains
+available. In that case a running session needs a recognized final completion
+footer to return to Ready; the divider before a streaming answer and silence are
+not completion. These improvements apply to desktop workspace terminals;
+Background sessions and SSH panes retain their separately documented reporting
+capabilities.
 
 ## Everyday workflow
 
@@ -391,7 +409,7 @@ the terminal itself.
 - Only open files are parsed for syntax highlighting. There are no language
   servers, type checkers, completion engines, or project-wide analyzers.
 - Editor languages and terminal UI are loaded on demand. Agent observations are
-  coalesced on terminal output and inspect at most 28 live rows. No
+  coalesced on terminal output and inspect at most 256 live physical rows. No
   project/transcript scanning is added. Visible session durations/reset labels
   update every 15 seconds; account quota polling is opt-in and pauses when the
   overview is hidden.

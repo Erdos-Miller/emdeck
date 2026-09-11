@@ -108,7 +108,10 @@ export default function TerminalPane({
       onError: error => callbacks.current.onError(error),
     });
     const title = term.onTitleChange(value => {
-      if (!disposed) callbacks.current.onTitle(pane.id, value);
+      if (!disposed) {
+        if (!pane.remote) activity.title(value);
+        callbacks.current.onTitle(pane.id, value);
+      }
     });
     const fitter = createTerminalFitter(term, () => fit.fit(), {
       request: callback => requestAnimationFrame(callback),
@@ -160,7 +163,7 @@ export default function TerminalPane({
       inspectionTimer = setTimeout(() => {
         inspectionTimer = undefined;
         if (disposed) return;
-        const lines = readAgentScreen(term.buffer.active, term.rows);
+        const lines = readAgentScreen(term.buffer.active, term.rows, kind === 'codex');
         const next = inspectAgentScreen(kind, lines);
         publishObservation({ ...next, activity: activity.inspect(lines) });
       }, 350);
@@ -268,7 +271,10 @@ export default function TerminalPane({
     void start();
     const input = term.onData(data => {
       if (!ended && native && !pane.remote && kind !== 'shell') {
-        const next = inspectAgentScreen(kind, readAgentScreen(term.buffer.active, term.rows));
+        const next = inspectAgentScreen(
+          kind,
+          readAgentScreen(term.buffer.active, term.rows, kind === 'codex')
+        );
         publishObservation({ ...next, activity: activity.input(data) });
       }
       if (nativeId.current)

@@ -1,5 +1,15 @@
 # React audit — 0.1.19
 
+## Unreleased — Codex activity signals
+
+The pinned 0.9.13 audit retains four reviewed Worktrees errors and 62 advisory
+warnings, with no new rule/file/message findings. Codex title events feed a
+provider-specific domain tracker in the existing terminal lifetime. Screen
+extraction uses a typed cell-attribute port; it adds no polling, remounts or
+provider configuration changes. Browser tests cover title-only completion,
+streaming, question/approval controls, narrow panes and terminal continuity. No
+rules were suppressed.
+
 ## Unreleased — agent activity accuracy
 
 The pinned 0.9.13 audit retains four reviewed Worktrees errors and 62 advisory
