@@ -158,6 +158,18 @@ in the native window's unsaved-edit check. Open editor buffers are checked
 before reading and applying a resolution; unsaved tabs must be saved or closed.
 Shared modal keyboard handling belongs only to the topmost dialog.
 
+Discard actions compose in `useDiscardActions`. The native `git_discard` service
+prepares an explicit tracked-file selection, including both ends of a rename,
+and fingerprints HEAD, the index, status and selected working files. Applying
+revalidates that preview under the repository operation guard, then passes only
+the confirmed literal paths to Git. Untracked files, links, submodules and Git
+metadata are protected. The invoking window's project is authorized by thin
+native commands; editor drafts are checked before preview and after
+confirmation. Git and document reconciliation refresh the current workspace
+after completion. Replacing a shared confirmation cancels the previous promise,
+releasing pending operation locks if a native window-close prompt interrupts the
+interaction.
+
 Merge draft transitions publish their dirty flag synchronously to a per-window
 close guard. Native close events read that guard directly, so closing
 immediately after an edit does not depend on a deferred React render or effect.
@@ -165,15 +177,20 @@ Draft cleanup clears the guard when the resolver unmounts.
 
 The optional terminal workspace rail filters the existing pane tree; its xterm
 instances retain stable parents and keys. Saved remote profiles and view
-preferences are explicit UI state. Pure connection validation and space grouping
-live in the agents domain service. The typed remote command validates the
-invoking window's project, builds OpenSSH argv natively, and reuses the owned
-PTY lifetime. Structured multiplexer fields reject shell syntax. User-authored
-custom command text is one remote argument, never evaluated by a local shell.
-Remote panes do not start local provider usage probes. Browser-provider profiles
-dispatch only an explicitly requested HTTPS URL through the existing
-external-URL command. See [Remote sessions](REMOTE-SESSIONS.md) for capabilities
-and boundaries.
+preferences are explicit UI state. The pure agent-activity service inspects a
+bounded live-screen tail for working, approval, question and ready cues; no
+transcript scan or background poll is added. Sidebar status presentation keeps
+connection states distinct from detected activity and includes approvals and
+questions in the attention filter. Theme-specific colors, icons and labels
+provide redundant indicators without changing terminal identity. Pure connection
+validation and space grouping live in the agents domain service. The typed
+remote command validates the invoking window's project, builds OpenSSH argv
+natively, and reuses the owned PTY lifetime. Structured multiplexer fields
+reject shell syntax. User-authored custom command text is one remote argument,
+never evaluated by a local shell. Remote panes do not start local provider usage
+probes. Browser-provider profiles dispatch only an explicitly requested HTTPS
+URL through the existing external-URL command. See
+[Remote sessions](REMOTE-SESSIONS.md) for capabilities and boundaries.
 
 Style imports retain their original cascade order. Responsive overrides load
 last. Shared scrollbar styles belong in `styles/scrollbars.css`: containers use

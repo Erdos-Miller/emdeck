@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Highlight workspace session states with colored borders, icons and readable
+  badges. Distinguish approval requests from detected questions waiting for an
+  answer, and include both in the attention count and filter.
+- Keep editor selections visible on the current line in dark, light and graphite
+  themes, including after focus and theme changes, without resetting undo
+  history.
+- Discard tracked changes from Source Control for one file or all files, with an
+  explicit restore/delete preview, protection for unsaved editor buffers and
+  changed-on-disk files, and support for staged edits, renames and deletions.
 - Launch Windows debug builds as desktop applications without an extra console
   window whose Close button also terminates the IDE.
 - Highlight environment files (`.env`, `.env.*`, and `*.env`), including keys,
