@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stabilize workspace status color tests by waiting for terminal focus after
+  selecting a session, then checking sidebar focus through keyboard navigation.
 - Clear Claude's Working state when its foreground turn completes, including
   modern done footers with background shells, custom status lines and unsent
   drafts. Retained completion history cannot finish a newly submitted task.

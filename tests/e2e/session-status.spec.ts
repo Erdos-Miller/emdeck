@@ -107,9 +107,19 @@ for (const theme of ['Dark', 'Light', 'Graphite']) {
       const row = rail.getByTitle(`Focus ${title}`, { exact: true });
       await row.click();
       await expect(row).toHaveAttribute('aria-pressed', 'true');
-      // Selection and keyboard focus must not restore the global green accent.
+      // Selecting a session focuses its terminal on the next animation frame.
+      // Wait for that handoff before testing keyboard navigation back to the rail.
+      const terminal = page.getByRole('region', { name: `${title} terminal`, exact: true });
+      await expect(terminal.getByRole('textbox', { name: 'Terminal input' })).toBeFocused();
+      const tabOrder = ['Architecture', 'Permissions', 'Building', 'Review'];
+      const index = tabOrder.indexOf(title);
+      const previous = index
+        ? rail.getByTitle(`Focus ${tabOrder[index - 1]}`, { exact: true })
+        : rail.getByRole('button', { name: 'Needs attention', exact: true });
+      await previous.focus();
       await page.keyboard.press('Tab');
-      await row.focus();
+      await expect(row).toBeFocused();
+      // Selection and keyboard focus must not restore the global green accent.
       const selected = await row.evaluate(element => ({
         focused: element.matches(':focus-visible'),
         badge: getComputedStyle(element.querySelector('.rail-status')!).color,
