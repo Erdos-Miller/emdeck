@@ -1,5 +1,14 @@
 # React audit — 0.1.19
 
+## Unreleased — environment file highlighting
+
+React Doctor 0.9.13 reports the same four reviewed Worktrees errors and 62
+advisory warnings, with no new rule/file findings. The editor loads the dotenv
+tokenizer on demand through its existing language compartment. Theme and
+document lifetimes remain unchanged; browser regressions cover token colors,
+plain-text fallback and undo across theme and tab switches. No rules were
+suppressed or size budgets changed.
+
 ## Unreleased — terminal keyboard input
 
 React Doctor 0.9.13 still reports four reviewed Worktrees errors and 62 advisory
