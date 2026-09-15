@@ -25,6 +25,7 @@ export default function TerminalContent({
   const {
     panes,
     project,
+    runtime,
     settings,
     layout,
     maxPane,
@@ -43,7 +44,6 @@ export default function TerminalContent({
     fail,
     paneState,
     observeAgent,
-    updateAgentUsage,
     updateTerminalTitle,
     paneFocus,
     runAgentCommand,
@@ -121,7 +121,7 @@ export default function TerminalContent({
           <Suspense fallback={<div className='loading'>Starting terminal…</div>}>
             <TerminalPane
               pane={pane}
-              root={project!.root}
+              connection={runtime.connection}
               settings={settings}
               maximized={maxPane === pane.id}
               onMaximize={handleMaximize}
@@ -131,9 +131,7 @@ export default function TerminalContent({
               onTitle={updateTerminalTitle}
               onError={fail}
               onObservation={observeAgent}
-              onUsage={updateAgentUsage}
               onCommand={handleCommand}
-              enhancedUsage={agentPreferences.claudeUsage}
               focusRequest={paneFocus.id === pane.id ? paneFocus.sequence : 0}
               selected={!workspace.selectedBackground && selectedPane === pane.id}
               onFocus={handleFocus}
@@ -219,6 +217,7 @@ export default function TerminalContent({
       {project && (
         <AgentPanel
           panes={panes}
+          connection={runtime.connection}
           states={paneStates}
           observations={agentObservations}
           usage={agentUsage}

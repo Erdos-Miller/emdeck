@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadAgentPreferences } from '../../features/agents/lib/agents';
 import { useRunConfigurations } from '../../features/runs/hooks/useRunConfigurations';
 import { loadSettings } from '../../features/settings/lib/settings';
@@ -6,7 +6,6 @@ import { readStored, store } from '../../platform/storage/preferences';
 import type { DialogSpec } from '../../shared/contracts/dialog';
 import type {
   AgentObservation,
-  AgentUsage,
   DiffTab,
   Entry,
   GitSnapshot,
@@ -17,6 +16,7 @@ import type {
   Project,
 } from '../../shared/contracts/workspace';
 import { useLatest } from '../../shared/hooks/useLatest';
+import { useSessionRuntime } from './useSessionRuntime';
 export function useWorkspaceState() {
   const [project, setProject] = useState<Project | null>(null);
   const [directories, setDirectories] = useState<Record<string, Entry[]>>({});
@@ -36,7 +36,6 @@ export function useWorkspaceState() {
   const [paneStates, setPaneStates] = useState<Record<string, PaneState>>({});
   const [agentPreferences, setAgentPreferences] = useState(loadAgentPreferences);
   const [agentObservations, setAgentObservations] = useState<Record<string, AgentObservation>>({});
-  const [agentUsage, setAgentUsage] = useState<Record<string, AgentUsage>>({});
   const [selectedPane, setSelectedPane] = useState<string | null>(null);
   const [paneFocus, setPaneFocus] = useState({ id: '', sequence: 0 });
   const [reveal, setReveal] = useState<{
@@ -65,6 +64,14 @@ export function useWorkspaceState() {
     } else setSidebarVisible(visible => !visible);
   };
   const [agentMenu, setAgentMenu] = useState(false);
+  const runtime = useSessionRuntime(project);
+  const agentUsage = useMemo(
+    () =>
+      Object.fromEntries(
+        (runtime.snapshot?.panes ?? []).flatMap(pane => (pane.usage ? [[pane.id, pane.usage]] : []))
+      ),
+    [runtime.snapshot]
+  );
   const runs = useRunConfigurations(project, settings.detectRunScripts);
   const [runsOpen, setRunsOpen] = useState(false);
   const [palette, setPalette] = useState(false);
@@ -194,8 +201,8 @@ export function useWorkspaceState() {
     setAgentPreferences,
     agentObservations,
     setAgentObservations,
+    runtime,
     agentUsage,
-    setAgentUsage,
     selectedPane,
     setSelectedPane,
     paneFocus,

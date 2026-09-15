@@ -1,11 +1,13 @@
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import type { Terminal } from '@xterm/xterm';
-import { call, native } from '../../../platform/desktop/api';
+import { native } from '../../../platform/desktop/api';
 import { validateAttachments } from '../services/attachments';
 
 interface Options {
   id: () => string | null;
   unavailable?: string;
+  upload: (name: string, data: Uint8Array) => Promise<string>;
+  paths: (paths: string[]) => Promise<string>;
   onError: (error: unknown) => void;
 }
 
@@ -21,7 +23,7 @@ export const bindTerminalAttachments = (host: HTMLElement, term: Terminal, optio
     if (!id) throw new Error('Wait for the terminal to connect before attaching files.');
     return id;
   };
-  const enqueue = (prepare: (id: string) => Promise<string>) => {
+  const enqueue = (prepare: () => Promise<string>) => {
     term.focus();
     queue = queue
       .then(async () => {
@@ -29,7 +31,7 @@ export const bindTerminalAttachments = (host: HTMLElement, term: Terminal, optio
         const session = id();
         target.dataset.attachmentBusy = 'true';
         try {
-          const input = await prepare(session);
+          const input = await prepare();
           if (!disposed && options.id() === session) term.paste(input);
         } finally {
           delete target.dataset.attachmentBusy;
@@ -40,17 +42,15 @@ export const bindTerminalAttachments = (host: HTMLElement, term: Terminal, optio
       });
   };
   const files = (files: File[]) =>
-    enqueue(async id => {
+    enqueue(async () => {
       validateAttachments(files);
-      const paths: string[] = [];
+      const inserted: string[] = [];
       for (const file of files) {
         if (disposed) return '';
-        const data = Array.from(new Uint8Array(await file.arrayBuffer()));
-        paths.push(
-          await call('terminal_attachment', { id, name: file.name || 'clipboard.png', data })
-        );
+        const data = new Uint8Array(await file.arrayBuffer());
+        inserted.push(await options.upload(file.name || 'clipboard.png', data));
       }
-      return paths.join('');
+      return inserted.join('');
     });
   const paste = (event: ClipboardEvent) => {
     const attachments = Array.from(event.clipboardData?.files ?? []);
@@ -93,7 +93,7 @@ export const bindTerminalAttachments = (host: HTMLElement, term: Terminal, optio
         );
         if (!hit || !target.contains(hit)) return;
         if (data.type === 'drop') {
-          enqueue(id => call('terminal_path_input', { id, paths: data.paths }));
+          enqueue(() => options.paths(data.paths));
         } else target.dataset.attachmentDrop = 'true';
       })
     : Promise.resolve(() => {});

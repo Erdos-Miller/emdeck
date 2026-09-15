@@ -1,7 +1,8 @@
 import { paneName } from '../services/terminal-title';
 import { Bot, ChevronDown, ChevronUp, Plus, RefreshCw, Search, Settings2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { call, native } from '../../../platform/desktop/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { native } from '../../../platform/desktop/api';
+import { sessionCall } from '../../../platform/desktop/sessions';
 import type {
   AccountUsage,
   AgentMetric,
@@ -16,6 +17,7 @@ import AgentCard from './AgentCard';
 import { WindowUsage } from './WindowUsage';
 interface Props {
   panes: Pane[];
+  connection: string | null;
   states: Record<string, PaneState>;
   observations: Record<string, AgentObservation>;
   usage: Record<string, AgentUsage>;
@@ -31,6 +33,7 @@ interface Props {
 }
 export default function AgentPanel({
   panes,
+  connection,
   states,
   observations,
   usage,
@@ -73,13 +76,13 @@ export default function AgentPanel({
   const accountLock = useRef(false);
   const alive = useRef(true);
   const has = (metric: AgentMetric) => preferences.metrics.includes(metric);
-  const refresh = async () => {
-    if (!native || accountLock.current) return;
+  const refresh = useCallback(async () => {
+    if (!native || !connection || accountLock.current) return;
     accountLock.current = true;
     setAccountBusy(true);
     setAccountError('');
     try {
-      const result = await call('codex_account_usage');
+      const result = await sessionCall(connection, 'account.usage', { provider: 'codex' });
       if (alive.current) setAccount(result);
     } catch (e) {
       if (alive.current) setAccountError(String(e).replace(/^Error: /, ''));
@@ -87,7 +90,7 @@ export default function AgentPanel({
       accountLock.current = false;
       if (alive.current) setAccountBusy(false);
     }
-  };
+  }, [connection]);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -103,7 +106,7 @@ export default function AgentPanel({
       if (document.visibilityState === 'visible') void refresh();
     }, preferences.refreshSeconds * 1000);
     return () => clearInterval(timer);
-  }, [active, showAccount, preferences.refreshSeconds]);
+  }, [active, showAccount, preferences.refreshSeconds, refresh]);
   const needsClock = panes.length > 0 && (has('elapsed') || has('limits'));
   useEffect(() => {
     if (!active || !needsClock) return;

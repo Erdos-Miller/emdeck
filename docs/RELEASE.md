@@ -172,10 +172,11 @@ infer that an unchecked template item is a failed test. Actual results belong in
 - [ ] Release notes list remaining limitations and exact tested platform
       versions.
 
-The opt-in `bun run test:soak` runs six synthetic native shells for two hours,
-streaming output, resizing PTYs and checking shutdown. It uses temporary files
-and no provider account. For a short smoke run set `EMDECK_SOAK_SECONDS=15`.
-This test does not measure WebView rendering or provider-agent behavior.
+The opt-in `bun run test:soak` runs six synthetic shells on a session server for
+two hours, streaming output, resizing PTYs and checking shutdown. It uses
+temporary files and no provider account. For a short smoke run set
+`EMDECK_SOAK_SECONDS=15`. This test does not measure WebView rendering or
+provider-agent behavior.
 
 The Windows package job also runs `scripts/release/windows-desktop.mjs` against
 the installed executable. It uses a unique test profile and synthetic project,

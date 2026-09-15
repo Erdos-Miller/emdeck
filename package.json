@@ -43,7 +43,7 @@
     "security:rust": "node scripts/release/rust-audit.mjs",
     "licenses:generate": "node scripts/release/javascript-licenses.mjs && node scripts/release/rust-licenses.mjs",
     "workflows:check": "node scripts/release/workflows.mjs",
-    "test:soak": "cargo test --manifest-path src-tauri/Cargo.toml --locked terminal::stress::six_terminals_stream_resize_and_shutdown -- --ignored --nocapture"
+    "test:soak": "cargo test --manifest-path src-tauri/Cargo.toml -p emdeck-session --locked --test soak -- --ignored --nocapture"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.1",

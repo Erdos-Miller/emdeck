@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures/desktop';
 import type { Page } from './fixtures/desktop';
+import { actionCount, actions } from './fixtures/session';
 async function requestClose(page: Page) {
   await expect
     .poll(() =>
@@ -50,9 +51,8 @@ test('startup reopens the last closed project without starting terminals or crea
   expect(calls.filter(call => call.command === 'open_project').map(call => call.args.path)).toEqual(
     ['/projects/first']
   );
-  expect(
-    calls.filter(call => ['terminal_spawn', 'open_project_window'].includes(call.command))
-  ).toEqual([]);
+  expect(calls.filter(call => call.command === 'open_project_window')).toEqual([]);
+  expect(await actions(page, 'pane.create')).toEqual([]);
 });
 test('startup upgrades the recent-project list and remembers the last focused workspace', async ({
   page,
@@ -228,13 +228,7 @@ test('opening another project defaults to a new window and keeps edits and termi
       ).__emdeckCalls.filter(c => c.command === 'open_project_window')
     )
   ).toEqual([{ command: 'open_project_window', args: { path: '/projects/second' } }]);
-  expect(
-    await page.evaluate(() =>
-      (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls.filter(
-        c => c.command === 'terminal_close'
-      )
-    )
-  ).toEqual([]);
+  expect(await actions(page, 'pane.remove')).toEqual([]);
 });
 test('project menu can explicitly replace this window and cancellation keeps it intact', async ({
   page,
@@ -287,4 +281,19 @@ test('window creation failure and folder picker cancellation preserve the projec
     )
   ).toBe(1);
   await expect(page.locator('.project-switch')).toContainText('first');
+});
+
+test('closing a window leaves its terminals running on the session server', async ({ page }) => {
+  await page
+    .locator('.terminal-empty')
+    .getByRole('button', { name: 'Start a terminal', exact: true })
+    .click();
+  await expect(page.locator('.xterm')).toBeVisible();
+  expect(await actionCount(page, 'pane.create')).toBe(1);
+  await requestClose(page);
+  await page.getByRole('button', { name: 'Close window', exact: true }).click();
+  expect(await destroyedWindows(page)).toEqual(['main']);
+  expect(await actionCount(page, 'pane.stop')).toBe(0);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
+  expect(await actionCount(page, 'pane.detach')).toBeGreaterThan(0);
 });

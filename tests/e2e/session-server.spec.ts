@@ -16,7 +16,7 @@ test('background view attaches existing agents, preserves terminals and separate
     state.__sessionActions = [];
     const original = state.__TAURI_INTERNALS__.invoke;
     const snapshot: SessionSnapshot = {
-      protocol: 1,
+      protocol: 2,
       serverId: 'server',
       revision: 1,
       workspaces: [{ id: 'workspace', name: 'Background project', root: '/projects/background' }],
@@ -32,6 +32,8 @@ test('background view attaches existing agents, preserves terminals and separate
             shell: '',
             command: 'claude',
             resumeOnRestart: false,
+            usageReporting: false,
+            args: [],
           },
           running: true,
           restored: false,
@@ -71,9 +73,12 @@ test('background view attaches existing agents, preserves terminals and separate
           data: action.params.after === null ? btoa('DETACHED SESSION RETAINED\r\n') : '',
           text: 'DETACHED SESSION RETAINED',
           pane: structuredClone(snapshot.panes[0]),
+          commandSequence: 0,
+          commands: [],
         };
       }
       if (action.method === 'pane.attach') return snapshot.panes[0];
+      if (action.method === 'pane.attachment') return { input: "'/srv/session/uploads/test.png' " };
       if (action.method === 'pane.stop') {
         snapshot.panes[0].running = false;
         snapshot.panes[0].agent.state = 'stopped';
@@ -103,8 +108,12 @@ test('background view attaches existing agents, preserves terminals and separate
       new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true })
     );
   });
-  await expect(terminal.getByRole('alert')).toContainText('file path on the session machine');
-  await terminal.getByRole('button', { name: 'Dismiss', exact: true }).click();
+  // Attachments reach the machine that owns the pane, including a detached one.
+  await expect
+    .poll(async () =>
+      (await actions()).flatMap(a => (a.method === 'pane.input' ? [a.params.text] : [])).join('')
+    )
+    .toContain("'/srv/session/uploads/test.png'");
   await terminal
     .locator('.xterm')
     .evaluate(el => el.setAttribute('data-session-test', 'preserved'));
@@ -124,7 +133,7 @@ test('background view attaches existing agents, preserves terminals and separate
     .poll(async () =>
       (await actions()).flatMap(a => (a.method === 'pane.input' ? [a.params.text] : [])).join('')
     )
-    .toBe('explicit input');
+    .toContain('explicit input');
   await installTerminalClipboard(terminal.locator('.xterm-helper-textarea'));
   await page.keyboard.press('Control+v');
   await page.keyboard.press('Shift+Enter');

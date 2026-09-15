@@ -79,7 +79,15 @@ export default function SessionForms({
     void onLaunch(
       machine,
       { root, name: workspaceName },
-      { name, cwd: root, command, shell, resumeOnRestart: resume }
+      {
+        name,
+        cwd: root,
+        command,
+        shell,
+        resumeOnRestart: resume,
+        usageReporting: true,
+        args: [],
+      }
     )
       .catch(e => setError(String(e)))
       .finally(() => setBusy(false));

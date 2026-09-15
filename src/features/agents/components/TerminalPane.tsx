@@ -1,31 +1,25 @@
-import { FitAddon } from '@xterm/addon-fit';
-import { Terminal } from '@xterm/xterm';
-import '@xterm/xterm/css/xterm.css';
+import type { Terminal } from '@xterm/xterm';
 import { Copy, Maximize2, Minimize2, RotateCcw, TerminalSquare, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { call, native, spawnTerminal } from '../../../platform/desktop/api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { native } from '../../../platform/desktop/api';
 import { findPaths, linkRange } from '../services/terminalLinks';
 import type {
   AgentCommand,
   AgentObservation,
-  AgentUsage,
   Pane,
   PaneState,
   Settings,
 } from '../../../shared/contracts/workspace';
 import { useLatest } from '../../../shared/hooks/useLatest';
 import { agentKind, agentStatus, inspectAgentScreen } from '../lib/agents';
-import { terminalFont } from '../lib/terminal-font';
-import { createTerminalFitter } from '../services/terminal-fit';
+import { useSessionTerminal } from '../hooks/useSessionTerminal';
 import { remoteStatus } from '../services/connections';
 import { paneName } from '../services/terminal-title';
-import { bindTerminalAttachments } from '../lib/terminalAttachments';
-import { bindTerminalKeyboard } from '../lib/terminalKeyboard';
-import { readAgentScreen } from '../services/agent-screen';
 import { createAgentActivityTracker } from '../services/agent-activity-tracker';
+import { readAgentScreen } from '../services/agent-screen';
 interface Props {
   pane: Pane;
-  root: string;
+  connection: string | null;
   settings: Settings;
   maximized: boolean;
   onMaximize: () => void;
@@ -35,16 +29,14 @@ interface Props {
   onTitle: (id: string, title: string) => void;
   onError: (error: unknown) => void;
   onObservation: (id: string, observation: AgentObservation | null) => void;
-  onUsage: (id: string, usage: AgentUsage | null) => void;
   onCommand: (id: string, command: AgentCommand) => void;
-  enhancedUsage: boolean;
   focusRequest: number;
   selected: boolean;
   onFocus: () => void;
 }
 export default function TerminalPane({
   pane,
-  root,
+  connection,
   settings,
   maximized,
   onMaximize,
@@ -54,74 +46,92 @@ export default function TerminalPane({
   onTitle,
   onError,
   onObservation,
-  onUsage,
   onCommand,
-  enhancedUsage,
   focusRequest,
   selected,
   onFocus,
 }: Props) {
-  const handleCopySelectedTerminalTextClick = () =>
-    void navigator.clipboard.writeText(terminal.current?.getSelection() ?? '').catch(onError);
-  const host = useRef<HTMLDivElement>(null),
-    terminal = useRef<Terminal | null>(null),
-    nativeId = useRef<string | null>(null),
-    fitRef = useRef<ReturnType<typeof createTerminalFitter> | null>(null);
   const [state, setState] = useState<PaneState>(native ? 'starting' : 'preview');
   const [observation, setObservation] = useState<AgentObservation | undefined>();
-  const callbacks = useLatest({ onState, onTitle, onError, onObservation, onUsage, onCommand });
-
-  // Launch inputs are sampled only when the session identity changes. Appearance
-  // updates and pane renames must never terminate a running agent.
-  const launch = useLatest({ pane, settings, enhancedUsage });
-
-  useEffect(() => {
-    if (!host.current) return;
-    const { pane, settings, enhancedUsage } = launch.current;
-    let disposed = false;
-    let activityTimer: ReturnType<typeof setTimeout> | undefined;
-    let inspectionTimer: ReturnType<typeof setTimeout> | undefined;
-    let observationKey = '';
-    const kind = agentKind(pane.command);
-    const activity = createAgentActivityTracker(kind);
-    callbacks.current.onUsage(pane.id, null);
-    callbacks.current.onObservation(pane.id, null);
-    setObservation(undefined);
-    const term = new Terminal({
-      cursorBlink: false,
-      fontFamily: terminalFont(settings.terminalFontFamily),
-      fontSize: settings.terminalFontSize,
-      lineHeight: settings.terminalLineHeight,
-      scrollback: settings.scrollback,
-      allowProposedApi: false,
-      theme: terminalTheme(settings.theme),
-      convertEol: false,
-    });
-    const fit = new FitAddon();
-    term.loadAddon(fit);
-    term.open(host.current);
-    terminal.current = term;
-    const detachAttachments = bindTerminalAttachments(host.current, term, {
-      id: () => nativeId.current,
-      unavailable: pane.remote
-        ? 'Transfer the file to the remote machine, then paste its remote path. Emdeck does not upload dropped files over SSH yet.'
-        : undefined,
-      onError: error => callbacks.current.onError(error),
-    });
-    const title = term.onTitleChange(value => {
-      if (!disposed) {
-        if (!pane.remote) activity.title(value);
+  const callbacks = useLatest({ onState, onTitle, onError, onObservation, onCommand });
+  const inspection = useRef({
+    timer: undefined as ReturnType<typeof setTimeout> | undefined,
+    key: '',
+  });
+  const theme = useMemo(() => terminalTheme(settings.theme), [settings.theme]);
+  const kind = agentKind(pane.command);
+  // A restart is a new process; its evidence must not carry across generations.
+  const trackerKey = `${kind}:${pane.generation}`;
+  const tracker = useRef({ key: trackerKey, value: createAgentActivityTracker(kind) });
+  if (tracker.current.key !== trackerKey)
+    tracker.current = { key: trackerKey, value: createAgentActivityTracker(kind) };
+  const activity = tracker.current.value;
+  const publish = (next: AgentObservation) => {
+    const key = JSON.stringify([next.activity, next.contextPercent, next.model]);
+    if (key !== inspection.current.key) {
+      inspection.current.key = key;
+      setObservation(next);
+      callbacks.current.onObservation(pane.id, next);
+    }
+  };
+  const screen = (term: Terminal) =>
+    readAgentScreen(term.buffer.active, term.rows, kind === 'codex');
+  const inspect = (term: Terminal) => {
+    if (inspection.current.timer || kind === 'shell') return;
+    inspection.current.timer = setTimeout(() => {
+      inspection.current.timer = undefined;
+      const lines = screen(term);
+      publish({ ...inspectAgentScreen(kind, lines), activity: activity.inspect(lines) });
+    }, 350);
+  };
+  const { host, terminal, error, takeControl } = useSessionTerminal({
+    connection,
+    id: pane.id,
+    generation: pane.generation,
+    settings,
+    theme,
+    attachmentMessage: pane.remote
+      ? 'Transfer the file to the remote machine, then paste its remote path. Emdeck does not upload dropped files through a remote shell pane.'
+      : undefined,
+    onState: next => {
+      setState(next);
+      callbacks.current.onState(pane.id, next);
+    },
+    onCommand: command => callbacks.current.onCommand(pane.id, command),
+    onError: error => callbacks.current.onError(error),
+    onOutput: inspect,
+    onExit: code =>
+      terminal.current?.writeln(
+        `\r\n\x1b[90m[${pane.remote ? 'SSH disconnected' : 'Process exited'}${code === null ? '' : ` with code ${code}`} · ${pane.remote ? 'reconnect to attach again' : 'restart to run again'}]\x1b[0m`
+      ),
+    setup: term => {
+      // The attached view parses OSC titles exactly; the server's title serves detached clients.
+      const title = term.onTitleChange(value => {
+        activity.title(value);
         callbacks.current.onTitle(pane.id, value);
+      });
+      const typing = term.onData(data => {
+        if (kind === 'shell') return;
+        const lines = screen(term);
+        publish({ ...inspectAgentScreen(kind, lines), activity: activity.input(data) });
+      });
+      const stop = () => {
+        title.dispose();
+        typing.dispose();
+      };
+      if (!native) {
+        term.writeln(`\x1b[32m  ${pane.name}\x1b[0m  \x1b[90m/ browser preview\x1b[0m\r\n`);
+        term.writeln(
+          `  ${pane.command ? `Launch command: ${pane.command}` : 'Your system shell, in your project folder.'}\r\n`
+        );
+        term.writeln('  Open Emdeck desktop to start a real session.');
+        term.writeln('  Installed CLIs run directly in this pane.\r\n');
+        term.writeln('  \x1b[90mNo agent is running in this preview.\x1b[0m');
+        return stop;
       }
-    });
-    const fitter = createTerminalFitter(term, () => fit.fit(), {
-      request: callback => requestAnimationFrame(callback),
-      cancel: id => cancelAnimationFrame(id),
-    });
-    fitRef.current = fitter;
-    // Remote output names remote files; a local search would open the wrong one.
-    if (!pane.remote)
-      term.registerLinkProvider({
+      // Remote output names remote files; a local search would open the wrong one.
+      if (pane.remote) return stop;
+      const links = term.registerLinkProvider({
         provideLinks(row, callback) {
           const buffer = term.buffer.active;
           let first = row;
@@ -147,198 +157,30 @@ export default function TerminalPane({
           );
         },
       });
-    const element = host.current;
-    element.addEventListener('wheel', fitter.cancel, { capture: true, passive: true });
-    element.addEventListener('pointerdown', fitter.cancel, true);
-    element.addEventListener('keydown', fitter.cancel, true);
-    element.addEventListener('touchstart', fitter.cancel, { capture: true, passive: true });
-    const publishObservation = (next: AgentObservation) => {
-      const key = JSON.stringify([next.activity, next.contextPercent, next.model]);
-      if (key !== observationKey) {
-        observationKey = key;
-        setObservation(next);
-        callbacks.current.onObservation(pane.id, next);
-      }
-    };
-    const inspect = () => {
-      if (inspectionTimer || disposed || kind === 'shell' || pane.remote) return;
-      inspectionTimer = setTimeout(() => {
-        inspectionTimer = undefined;
-        if (disposed) return;
-        const lines = readAgentScreen(term.buffer.active, term.rows, kind === 'codex');
-        const next = inspectAgentScreen(kind, lines);
-        publishObservation({ ...next, activity: activity.inspect(lines) });
-      }, 350);
-    };
-    let lastState: PaneState | undefined;
-    const update = (next: PaneState) => {
-      if (!disposed && next !== lastState) {
-        lastState = next;
-        setState(next);
-        callbacks.current.onState(pane.id, next);
-      }
-    };
-    let frame = 0;
-    const resize = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (!disposed && host.current?.clientWidth && host.current?.clientHeight) {
-          fitter.fit();
-          if (nativeId.current)
-            void call('terminal_resize', {
-              id: nativeId.current,
-              cols: term.cols,
-              rows: term.rows,
-            }).catch(() => {});
-        }
-      });
-    };
-    const observer = new ResizeObserver(resize);
-    observer.observe(host.current);
-    resize();
-    let ended = false;
-    let pendingInput = '';
-    const start = async () => {
-      if (!native) {
-        update('preview');
-        term.writeln(`\x1b[32m  ${pane.name}\x1b[0m  \x1b[90m/ browser preview\x1b[0m\r\n`);
-        term.writeln(
-          `  ${pane.command ? `Launch command: ${pane.command}` : 'Your system shell, in your project folder.'}\r\n`
-        );
-        term.writeln('  Open Emdeck desktop to start a real session.');
-        term.writeln('  Installed CLIs run directly in this pane.\r\n');
-        term.writeln('  \x1b[90mNo agent is running in this preview.\x1b[0m');
-        return;
-      }
-      update('starting');
-      fitter.fit();
-      try {
-        const id = await spawnTerminal(
-          root,
-          pane.cwd,
-          pane.shell,
-          pane.command,
-          term.cols,
-          term.rows,
-          event => {
-            if (disposed) return;
-            if (event.type === 'data') {
-              term.write(new Uint8Array(event.data), inspect);
-              update('output');
-              clearTimeout(activityTimer);
-              activityTimer = setTimeout(() => {
-                if (!ended) update('running');
-              }, 1400);
-            } else if (event.type === 'usage') {
-              callbacks.current.onUsage(pane.id, event.usage);
-            } else if (event.type === 'command') {
-              callbacks.current.onCommand(pane.id, event.command);
-            } else {
-              ended = true;
-              nativeId.current = null;
-              clearTimeout(activityTimer);
-              update('exited');
-              term.writeln(
-                `\r\n\x1b[90m[${pane.remote ? 'SSH disconnected' : 'Process exited'}${event.code === null ? '' : ` with code ${event.code}`} · ${pane.remote ? 'reconnect to attach again' : 'restart to run again'}]\x1b[0m`
-              );
-            }
-          },
-          enhancedUsage,
-          pane.remote?.target
-        );
-        if (disposed) {
-          await call('terminal_close', { id });
-          return;
-        }
-        if (!ended) {
-          nativeId.current = id;
-          update('running');
-          resize();
-          if (pendingInput) {
-            void call('terminal_write', { id, data: pendingInput }).catch(
-              callbacks.current.onError
-            );
-            pendingInput = '';
-          }
-        }
-      } catch (e) {
-        if (!disposed) {
-          update('error');
-          term.writeln(
-            `\r\n\x1b[31m${String(e)}\x1b[0m\r\n${pane.remote ? 'Check OpenSSH installation, the saved connection, and SSH configuration.' : 'Check the shell and agent command in Settings.'}`
-          );
-        }
-      }
-    };
-    void start();
-    const input = term.onData(data => {
-      if (!ended && native && !pane.remote && kind !== 'shell') {
-        const next = inspectAgentScreen(
-          kind,
-          readAgentScreen(term.buffer.active, term.rows, kind === 'codex')
-        );
-        publishObservation({ ...next, activity: activity.input(data) });
-      }
-      if (nativeId.current)
-        void call('terminal_write', { id: nativeId.current, data }).catch(
-          callbacks.current.onError
-        );
-      else if (!ended && native && pendingInput.length < 4096) pendingInput += data;
-    });
-    bindTerminalKeyboard(term, error => callbacks.current.onError(error));
-    return () => {
-      disposed = true;
-      clearTimeout(activityTimer);
-      clearTimeout(inspectionTimer);
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      fitter.dispose();
-      fitRef.current = null;
-      element.removeEventListener('wheel', fitter.cancel, true);
-      element.removeEventListener('pointerdown', fitter.cancel, true);
-      element.removeEventListener('keydown', fitter.cancel, true);
-      element.removeEventListener('touchstart', fitter.cancel, true);
-      input.dispose();
-      detachAttachments();
-      title.dispose();
-      term.dispose();
-      terminal.current = null;
-      const id = nativeId.current;
-      nativeId.current = null;
-      if (id) void call('terminal_close', { id }).catch(() => {});
-    };
-  }, [callbacks, launch, pane.id, pane.restart, root]);
+      return () => {
+        links.dispose();
+        stop();
+      };
+    },
+  });
+  useEffect(() => {
+    const pending = inspection.current;
+    return () => clearTimeout(pending.timer);
+  }, []);
+  useEffect(() => {
+    inspection.current.key = '';
+    setObservation(undefined);
+    callbacks.current.onObservation(pane.id, null);
+  }, [pane.id, pane.generation, callbacks]);
   useEffect(() => {
     if (focusRequest)
       requestAnimationFrame(() => {
         host.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         terminal.current?.focus();
       });
-  }, [focusRequest]);
-  useEffect(() => {
-    if (terminal.current) {
-      terminal.current.options.theme = terminalTheme(settings.theme);
-      terminal.current.options.fontFamily = terminalFont(settings.terminalFontFamily);
-      terminal.current.options.fontSize = settings.terminalFontSize;
-      terminal.current.options.lineHeight = settings.terminalLineHeight;
-      terminal.current.options.scrollback = settings.scrollback;
-      if (host.current?.clientWidth) {
-        fitRef.current?.fit();
-        if (nativeId.current)
-          void call('terminal_resize', {
-            id: nativeId.current,
-            cols: terminal.current.cols,
-            rows: terminal.current.rows,
-          }).catch(() => {});
-      }
-    }
-  }, [
-    settings.theme,
-    settings.terminalFontFamily,
-    settings.terminalFontSize,
-    settings.terminalLineHeight,
-    settings.scrollback,
-  ]);
+  }, [focusRequest, host, terminal]);
+  const handleCopySelectedTerminalTextClick = () =>
+    void navigator.clipboard.writeText(terminal.current?.getSelection() ?? '').catch(onError);
   return (
     <section
       className={`terminal-pane ${maximized ? 'maximized' : ''} ${selected ? 'selected-agent' : ''}`}
@@ -389,6 +231,12 @@ export default function TerminalPane({
           <X size={13} />
         </button>
       </header>
+      {error && (
+        <div className='session-error' role='alert'>
+          {error}
+          <button onClick={takeControl}>Take control / retry</button>
+        </div>
+      )}
       <div className='terminal-host' ref={host} />
       <footer className='pane-footer'>
         <span>{pane.remote?.target.host ?? (pane.cwd ? `./${pane.cwd}` : './')}</span>

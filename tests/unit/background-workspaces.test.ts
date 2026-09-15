@@ -33,6 +33,8 @@ const machine = (id: string): MachineConnection => ({
           command: 'claude',
           shell: '',
           resumeOnRestart: false,
+          usageReporting: false,
+          args: [],
         },
         agent: {
           kind: 'claude',

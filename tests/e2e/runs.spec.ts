@@ -7,8 +7,11 @@ interface RunFixture {
 }
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { sessionServer } from './fixtures/desktop';
+import { actions } from './fixtures/session';
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript({ path: sessionServer });
   await page.addInitScript(() => {
     const state = window as unknown as RunFixture;
     state.isTauri = true;
@@ -20,7 +23,6 @@ test.beforeEach(async ({ page }) => {
       'bun.lock': '',
     };
     let callback = 0;
-    let terminal = 0;
     state.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
     state.__TAURI_INTERNALS__ = {
       metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },
@@ -58,8 +60,16 @@ test.beforeEach(async ({ page }) => {
               changes: [],
               commits: [],
             };
-          case 'terminal_spawn':
-            return `pty-${++terminal}`;
+          case 'session_connect':
+            return 'session-0';
+          case 'session_disconnect':
+            return null;
+          case 'session_request':
+            return (
+              window as unknown as {
+                __emdeckSession: { request: (a: unknown) => Promise<unknown> };
+              }
+            ).__emdeckSession.request(args.action);
           default:
             return null;
         }
@@ -86,13 +96,7 @@ async function addCustom(page: Page) {
   );
 }
 async function launches(page: Page) {
-  return page.evaluate(() =>
-    (
-      window as unknown as { __runCalls: { command: string; args: Record<string, unknown> }[] }
-    ).__runCalls
-      .filter(call => call.command === 'terminal_spawn')
-      .map(call => call.args)
-  );
+  return (await actions(page, 'pane.create')).map(params => params.launch);
 }
 
 test('Bun scripts run from the picker and F5, with recent history but no automatic execution', async ({
@@ -109,7 +113,7 @@ test('Bun scripts run from the picker and F5, with recent history but no automat
   await detected.getByTitle('Run bun dev', { exact: true }).click();
   await expect
     .poll(() => launches(page))
-    .toEqual([expect.objectContaining({ command: 'bun run dev', cwd: '' })]);
+    .toEqual([expect.objectContaining({ command: 'bun run dev', cwd: '/projects/bun-app' })]);
   await page.locator('.xterm-helper-textarea').first().focus();
   await page.keyboard.press('F5');
   await expect.poll(() => launches(page)).toHaveLength(2);
@@ -133,7 +137,12 @@ test('custom commands persist independently while discovery refreshes and histor
     .click();
   await expect
     .poll(() => launches(page))
-    .toEqual([expect.objectContaining({ command: 'bun run check --verbose', cwd: 'apps/api' })]);
+    .toEqual([
+      expect.objectContaining({
+        command: 'bun run check --verbose',
+        cwd: '/projects/bun-app/apps/api',
+      }),
+    ]);
   await page.reload();
   await expect(page.locator('.run-config')).toContainText('API checks');
   await openRuns(page);

@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures/desktop';
 import type { Page } from './fixtures/desktop';
 import type { SessionSnapshot } from '../../src/shared/contracts/sessions';
-import type { TerminalEvent } from '../../src/shared/contracts/workspace';
+import { actions, emit as emitPane, paneIds } from './fixtures/session';
 import {
   backgroundCalls,
   backgroundPane,
@@ -10,24 +10,13 @@ import {
 } from './fixtures/background-layout';
 
 const rail = (page: Page) => page.getByRole('complementary', { name: 'Terminal workspaces' });
-const emit = async (page: Page, id: number, event: TerminalEvent) =>
-  page.evaluate(
-    ({ id, event }) => {
-      (
-        window as unknown as { __emdeckEmitTerminal: (id: string, event: TerminalEvent) => void }
-      ).__emdeckEmitTerminal(`pty-${id}`, event);
-    },
-    { id, event }
-  );
-const text = (value: string): TerminalEvent => ({
-  type: 'data',
-  data: [...new TextEncoder().encode(value)],
-});
+const emit = async (page: Page, index: number, text: string) =>
+  emitPane(page, (await paneIds(page))[index], text);
 const launch = async (page: Page, id: number, name: string) => {
   await page.getByRole('button', { name: 'New terminal', exact: true }).click();
   await page.getByRole('button', { name: 'Claude Claude Code' }).click();
   await expect(page.locator('.terminal-pane')).toHaveCount(id + 1);
-  await emit(page, id, text(`\x1b]2;${name}\x07`));
+  await emit(page, id, `\x1b]2;${name}\x07`);
   await expect(rail(page).getByTitle(`Focus ${name}`, { exact: true })).toBeVisible();
 };
 const setup = async (page: Page) => {
@@ -45,7 +34,7 @@ const setup = async (page: Page) => {
   ];
   for (const [id, [name, status, screen]] of rows.entries()) {
     await launch(page, id, name);
-    await emit(page, id, text(`\x1b[2J\x1b[H\x1b[999;1H${screen}`));
+    await emit(page, id, `\x1b[2J\x1b[H\x1b[999;1H${screen}`);
     await expect(rail(page).getByTitle(`Focus ${name}`, { exact: true })).toHaveAttribute(
       'data-status',
       status
@@ -119,14 +108,7 @@ for (const theme of ['Dark', 'Light', 'Graphite']) {
     await expand(page);
     expect(await colors(page)).toEqual(original);
     await expect(page.locator('.xterm[data-stable="yes"]')).toHaveCount(4);
-    expect(
-      await page.evaluate(
-        () =>
-          (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls.filter(
-            call => call.command === 'terminal_close'
-          ).length
-      )
-    ).toBe(0);
+    expect(await actions(page, 'pane.remove')).toHaveLength(0);
   });
 }
 
@@ -140,7 +122,7 @@ test('compact attention updates live, preserves expanded search and remembers co
   await expect(rail(page).locator('.rail-session')).toHaveCount(4);
   await rail(page).getByRole('button', { name: 'Needs attention', exact: true }).click();
   await expect(rail(page).locator('.rail-session')).toHaveCount(2);
-  await emit(page, 0, text('\x1b[2J\x1b[H\x1b[999;1HWorking...\r\nEsc to interrupt'));
+  await emit(page, 0, '\x1b[2J\x1b[H\x1b[999;1HWorking...\r\nEsc to interrupt');
   await expect(rail(page).locator('.rail-session')).toHaveCount(1);
   await expect(rail(page).getByLabel('1 sessions need attention')).toBeVisible();
   await expand(page);

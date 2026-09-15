@@ -1,11 +1,6 @@
-use super::terminal::program_command;
 use super::workspace::Result;
-use portable_pty::CommandBuilder;
 use serde::Deserialize;
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::{ffi::OsStr, path::PathBuf};
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -117,15 +112,15 @@ fn ssh_executable(paths: &OsStr, name: &str) -> Result<PathBuf> {
         })
 }
 
-pub(crate) fn command(target: &SshTarget, cwd: &Path) -> Result<CommandBuilder> {
-    let args = ssh_args(target)?;
+/// A direct argv for the session server, so no local shell ever parses these tokens.
+pub(crate) fn session_args(target: &SshTarget) -> Result<Vec<String>> {
     let executable = ssh_executable(
         &std::env::var_os("PATH").unwrap_or_default(),
         if cfg!(windows) { "ssh.exe" } else { "ssh" },
     )?;
-    let mut command = program_command(executable, cwd);
-    command.args(args);
-    Ok(command)
+    let mut args = vec![executable.to_string_lossy().into_owned()];
+    args.extend(ssh_args(target)?);
+    Ok(args)
 }
 
 #[cfg(test)]
@@ -144,7 +139,7 @@ mod tests {
         std::fs::create_dir(&directory).unwrap();
         let executable = directory.join("ssh-fixture");
         std::fs::write(&executable, b"fixture, never executed").unwrap();
-        let paths = std::env::join_paths([Path::new("."), directory.as_path()]).unwrap();
+        let paths = std::env::join_paths([std::path::Path::new("."), directory.as_path()]).unwrap();
         assert_eq!(ssh_executable(&paths, "ssh-fixture").unwrap(), executable);
         assert!(ssh_executable(OsStr::new("."), "ssh-fixture").is_err());
         std::fs::remove_file(executable).unwrap();

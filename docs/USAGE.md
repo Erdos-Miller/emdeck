@@ -14,6 +14,11 @@ Open a project, edit a few files, and keep your terminal agents in view. Emdeck
 does not build a project index, run language servers, lint in the background, or
 start agents merely because a project was opened.
 
+Terminals run on Emdeck's own headless session server, so agents keep their own
+process, screen and usage on the machine that hosts them. The unreleased
+**Background sessions** view adds detached views and remote machines on top of
+it. See [setup, automation and current limits](PERSISTENT-AGENTS.md).
+
 Opening a folder that is already open brings its existing window forward and
 preserves its edits and terminals. Different folders open in separate windows.
 See [project windows](PROJECT-WINDOWS.md) for launching a specific folder and
@@ -24,10 +29,6 @@ session tiles beside your terminals. Status colors and icons remain visible;
 hover for full job details or click a tile to focus its terminal. The attention
 filter, launch button and machine controls remain available. Emdeck remembers
 the collapsed view. Expanding restores the sidebar and its search text.
-
-The unreleased **Background sessions** view uses Emdeck's own optional headless
-server to keep local and remote terminal agents running after the IDE closes.
-See [setup, automation and current limits](PERSISTENT-AGENTS.md).
 
 ![Emdeck workspace with files, editor and agent terminals](screenshots/workspace-dark.png)
 
@@ -86,19 +87,20 @@ the configured shell and are never launched merely by opening a project.
 New terminals, including the Claude/Codex presets and background sessions, use
 their own color support even when the program that launched Emdeck disables
 colored logs. To disable colors intentionally, set `NO_COLOR` in your shell
-profile or custom command. After updating Emdeck, restart the app before opening
-new panes; existing terminals keep the environment they started with. Background
-sessions require the updated session server to launch new panes.
+profile or custom command. After updating Emdeck, restart the session server
+before opening new panes; existing terminals keep the environment they started
+with. An Emdeck build always refuses a session server from a different build:
+stop that server, then open the project again.
 
-Local terminal panes accept files dragged from the system file manager and
-images or files pasted from the clipboard. Drops insert quoted file paths;
-clipboard file data is stored in a private temporary directory and its path is
-inserted without pressing Enter. Those temporary files are removed when the
-terminal ends. Clipboard attachments are limited to 10 MiB per file, 20 MiB per
-paste, and 100 MiB per terminal. Plain-text paste continues to work normally.
-File transfer to SSH, WSL and background sessions is not implemented; use a path
-on the session machine in those views. An explicit message appears if a file is
-dropped or pasted there.
+Terminal panes accept files dragged from the system file manager and images or
+files pasted from the clipboard. Drops insert quoted file paths; clipboard file
+data is sent to the pane's own machine, stored in a private temporary directory
+there, and its path is inserted without pressing Enter. Those temporary files
+are removed when the terminal ends. Clipboard attachments are limited to 10 MiB
+per file, 20 MiB per paste, and 100 MiB per terminal. Plain-text paste continues
+to work normally. A pane that is itself running an SSH or WSL client shows an
+explicit message instead: the filesystem you see there is not the one holding
+the file, so paste a path from that machine.
 
 With the terminal focused, use **Ctrl+V** on Windows/Linux or **Cmd+V** on macOS
 to paste; **Ctrl+Shift+V** is also supported. Keyboard and context-menu paste
@@ -157,8 +159,8 @@ are configurable. These preferences persist across projects and restarts.
   temporary session-only status line; it does not change saved Claude settings.
   Disable it before launching to keep your usual status line. Custom
   commands/flags do not receive this integration.
-- **Codex:** press **Refresh Codex account usage** for quota windows from your
-  installed, signed-in CLI through its
+- **Codex:** press **Refresh Codex account usage** for quota windows from the
+  signed-in CLI installed on that session's machine, through its
   [app-server account interface](https://learn.chatgpt.com/docs/app-server).
   Limits are shared across sessions, not charged to individual panes. Requests
   are read-only, do not start an agent conversation, and cache successful
@@ -425,13 +427,14 @@ revision check substantially reduces accidental overwrites, but cannot provide
 transactional locking against unrelated external writers.
 
 Closing a pane ends its terminal session. Closing an Emdeck window ends only
-that window's sessions; other windows stay open. Hiding or maximizing panels
-keeps sessions mounted and running. Deliberately detached/background processes
-can outlive their shell. The optional Background sessions view supports
-persistent detach/reattach; see [Session server](PERSISTENT-AGENTS.md). Ordinary
-terminal panes remain owned by their desktop window. Agent activity labels are
-detected from terminal text; connection, recent output, exit, and error describe
-the terminal itself.
+that window's sessions; other windows stay open. If Emdeck exits without that
+step, its panes keep running on the session server and reopening the project
+reattaches to them. Hiding or maximizing panels keeps sessions mounted and
+running. Deliberately detached/background processes can outlive their shell. The
+optional Background sessions view supports persistent detach/reattach; see
+[Session server](PERSISTENT-AGENTS.md). Ordinary terminal panes remain owned by
+their desktop window. Agent activity labels are detected from terminal text;
+connection, recent output, exit, and error describe the terminal itself.
 
 ## Performance approach
 
@@ -508,6 +511,7 @@ src/shared/           Plain contracts, neutral utilities and shared UI
 src/platform/         Typed desktop transport, browser preview and storage
 src/styles/           Ordered styles by feature and layout
 src-tauri/src/        Native commands, services and window-owned state
+src-tauri/runtime/    Headless session server that owns every terminal
 tests/unit/           In-memory service behavior
 tests/integration/    Real Bun execution in an isolated temporary folder
 tests/e2e/            Browser workflows against a fixed production build

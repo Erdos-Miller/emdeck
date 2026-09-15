@@ -4,6 +4,12 @@ Emdeck owns its session server. Herdr is a behavioral reference, not a runtime
 dependency. This experimental feature is unreleased; the published 0.1.22 beta
 does not include it.
 
+Every Emdeck terminal runs on this server. Opening a project connects that
+window to the local server and registers the project folder as a server
+workspace; each pane you launch is a server pane. The **Background sessions**
+view below adds machines, detached views and remote hosts on top of the same
+server.
+
 ## Desktop workflow
 
 Background terminals are also available in **Workspaces**, alongside ordinary
@@ -113,11 +119,17 @@ payload as one argument with appropriate shell quoting:
 
 ```json
 {"method":"workspace.create","params":{"root":"/home/me/project","name":"Project"}}
-{"method":"pane.create","params":{"launch":{"workspaceId":"WORKSPACE_ID","name":"Claude","cwd":"/home/me/project","shell":"","command":"claude","resumeOnRestart":false},"cols":100,"rows":30}}
-{"method":"pane.read","params":{"id":"PANE_ID","after":null,"wait_ms":0}}
+{"method":"pane.create","params":{"launch":{"workspaceId":"WORKSPACE_ID","name":"Claude","cwd":"/home/me/project","shell":"","command":"claude","resumeOnRestart":false,"usageReporting":true,"args":[]},"cols":100,"rows":30}}
+{"method":"pane.read","params":{"id":"PANE_ID","after":null,"wait_ms":0,"commands_after":null}}
 {"method":"agent.wait","params":{"id":"PANE_ID","generation":"GENERATION","states":["blocked","idle"],"timeout_ms":25000}}
 {"method":"agent.prompt","params":{"id":"PANE_ID","generation":"GENERATION","text":"Run the relevant tests"}}
+{"method":"account.usage","params":{"provider":"codex"}}
 ```
+
+`launch.args` is an alternative to `shell`/`command`: its values are passed to
+the program directly, so no local shell parses them. Emdeck uses it for SSH
+panes. `launch.usageReporting` applies Claude's status-line integration to a
+plain `claude` pane.
 
 Create another pane in the workspace to split work. Wait returns
 `matched: false` on timeout/exit and errors if the occupant changes; reissue
@@ -127,10 +139,22 @@ answers a permission dialog. Raw input uses `pane.attach` with a client ID,
 `runtime/src/protocol.rs`.
 
 Children inherit `EMDECK_PANE_ID`, `EMDECK_PANE_GENERATION`,
-`EMDECK_SESSION_HOME` and `EMDECK_CLI_EXE`. Integrations can call
-`emdeck-session report working`, `report blocked`, or `report idle`. A second
-argument registers a Claude/Codex conversation ID. The embedded IDE executable
-uses `emdeck-ide.exe session ...`; the standalone binary omits `session`.
+`EMDECK_SESSION_HOME`, `EMDECK_CLI_EXE` and `EMDECK_CLI_ARGS`. Integrations can
+call `emdeck-session report working`, `report blocked`, or `report idle`. A
+second argument registers a Claude/Codex conversation ID. The embedded IDE
+executable uses `emdeck-ide.exe session ...`; the standalone binary omits
+`session`.
+
+`emdeck-session command '<JSON>'` asks the desktop view attached to this pane to
+open a file or a diff: `{"op":"openFile","path":"src/App.tsx","line":42}` or
+`{"op":"showDiff","reference":"main","working":true}`. A rejected command exits
+non-zero. Commands wait in a bounded queue and are delivered once per view; they
+never run without a desktop client.
+
+`emdeck-session report-usage` reads Claude's status-line JSON on stdin, prints
+the status line back, and records model, context, token, cost and quota fields
+on the pane. Panes launched with `usageReporting` install it automatically. The
+server bounds every reported field and keeps nothing else from that payload.
 
 Claude command hooks can invoke `emdeck-session hook-claude` for `SessionStart`,
 `UserPromptSubmit`, `PreToolUse`, `PermissionRequest`, `PostToolUse`,
@@ -152,17 +176,21 @@ does not imply complete lifecycle support; unrecognized screens show
 ## Boundaries
 
 The headless `emdeck-session` Rust crate owns workspaces, PTYs, terminal screen
-state, agent observations, and persisted layout metadata. It has no React,
-Tauri, WebView, project indexer, or language-server dependency. The desktop is a
-client. A standalone binary runs on remote machines without the desktop GUI.
+state, agent observations, usage reports, queued agent commands, pasted
+attachments, and persisted layout metadata. It has no React, Tauri, WebView,
+project indexer, or language-server dependency. The desktop is a client. A
+standalone binary runs on remote machines without the desktop GUI.
 
-The desktop, CLI, and SSH bridge use a versioned JSON protocol. Local access is
-restricted to a loopback listener with a random capability stored in a private
-per-user directory. The capability is never included in renderer state, URLs, or
-remote profile settings. Remote access uses either the bridge through OpenSSH or
-the optional TLS listener bound to a Tailscale IPv4 address. Direct clients pair
-using an expiring, single-use code and keep their revocable credentials in
-native private storage. No unauthenticated terminal access is exposed.
+The desktop, CLI, and SSH bridge use a versioned JSON protocol. Both ends
+require the exact same version. A newer Emdeck refuses to talk to an older
+running server and says so; stop that server explicitly to continue. Local
+access is restricted to a loopback listener with a random capability stored in a
+private per-user directory. The capability is never included in renderer state,
+URLs, or remote profile settings. Remote access uses either the bridge through
+OpenSSH or the optional TLS listener bound to a Tailscale IPv4 address. Direct
+clients pair using an expiring, single-use code and keep their revocable
+credentials in native private storage. No unauthenticated terminal access is
+exposed.
 
 Closing a view releases its input ownership and disconnects its client. Stopping
 a terminal or the server is a separate explicit operation. A slow or
@@ -172,17 +200,26 @@ every screen.
 
 ## Persistence and authority
 
+Closing a pane stops and removes it, and closing an Emdeck window stops the
+panes it launched. Panes that outlive Emdeck because it exited without that
+handshake keep running, and reopening that project reattaches to the running
+ones. Ones that have since stopped stay listed in **Background sessions**, where
+**Start again** and **Remove** apply; they count toward the server's pane limit
+until they are removed.
+
 Live processes survive desktop close and network loss while their host and
 server remain running. A sleeping local machine pauses work; a separate remote
 host can continue. Reboot ends OS processes. Layout metadata can be restored,
 and supported agents can resume a specifically recorded native conversation.
 Arbitrary commands are never silently replayed after restart.
 
-No OS login/startup service is installed. Start the server manually after
-reboot, connect locally from Emdeck, or configure your own service manager.
-Automatic native resume requires a registered conversation ID and the explicit
-per-pane option. Claude uses `--resume ID`; Codex uses `resume ID`. This
-restores provider conversation state, not the old OS process.
+No OS login/startup service is installed. Opening a project starts the local
+server if it is not already running, and it keeps running when Emdeck closes.
+`emdeck-session stop` ends it and its terminals. Remote machines are never
+started for you; run `emdeck-session start` there, or configure your own service
+manager. Automatic native resume requires a registered conversation ID and the
+explicit per-pane option. Claude uses `--resume ID`; Codex uses `resume ID`.
+This restores provider conversation state, not the old OS process.
 
 Agent states are `working`, `blocked`, `idle`, `done`, `unknown`, and `stopped`.
 They come from explicit lifecycle reports or conservative terminal-screen
@@ -193,7 +230,9 @@ raw input remains an explicit separate API operation.
 
 Terminal output is held in bounded memory, not written to project files. Layout
 and explicitly registered conversation references are separate from terminal
-history and credentials. Native session resume is an explicit per-pane choice.
+history and credentials. Usage reports and queued agent commands are live
+session state and are never written to the layout file. Native session resume is
+an explicit per-pane choice.
 
 Storage defaults to `%LOCALAPPDATA%/Emdeck/sessions` on Windows and
 `$XDG_STATE_HOME/emdeck/sessions` (or `~/.local/state/emdeck/sessions`) on Unix.
@@ -202,8 +241,10 @@ commands and paths; files are private to the user (and SYSTEM on Windows).
 Reattachment restores the current screen, not an unlimited history. In-memory
 output disappears when the server restarts. Limits are 64 panes/64 workspaces.
 
-Remote quota, cost and token aggregation is not implemented by this server; the
-existing local metrics view remains available. Missing data is not zero usage or
+Claude usage is reported by the pane's own status line and stays with that pane
+on its machine, including over SSH. Codex account quotas are read from the CLI
+installed on the session machine, so each machine reports its own account.
+Cross-machine aggregation is not implemented. Missing data is not zero usage or
 proof of completion. Actual provider versions and authenticated remote hosts
 still need validation before claiming production parity.
 

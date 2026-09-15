@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures/desktop';
 import type { Page } from './fixtures/desktop';
-import type { TerminalEvent } from '../../src/shared/contracts/workspace';
+import { actions, emit, exitPane } from './fixtures/session';
 
 const calls = async (page: Page, name: string) =>
   page.evaluate(
@@ -12,13 +12,9 @@ const calls = async (page: Page, name: string) =>
         .map(c => c.args),
     name
   );
-const emit = async (page: Page, id: string, event: TerminalEvent) =>
-  page.evaluate(
-    ({ id, event }) =>
-      (
-        window as unknown as { __emdeckEmitTerminal: (id: string, event: TerminalEvent) => void }
-      ).__emdeckEmitTerminal(id, event),
-    { id, event }
+const launches = async (page: Page, remote: boolean) =>
+  (await actions(page, 'pane.create')).filter(
+    params => (params.launch as { args: string[] }).args.length > 0 === remote
   );
 const openManager = async (page: Page) => {
   await page.getByTitle('Remote connections', { exact: true }).click();
@@ -49,12 +45,7 @@ test('optional workspace view preserves terminals, editor state and attention na
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.insertText('// retained edit');
   await launchLocal(page);
-  await emit(page, 'pty-0', {
-    type: 'data',
-    data: [
-      ...new TextEncoder().encode('Would you like to run this command?\r\n1. Yes\r\n2. No\r\n'),
-    ],
-  });
+  await emit(page, 'pane-0', 'Would you like to run this command?\r\n1. Yes\r\n2. No\r\n');
   await page.locator('.xterm').evaluate(el => el.setAttribute('data-continuity', 'original'));
   await page.getByLabel('Terminal view').selectOption('workspaces');
   const rail = page.getByRole('complementary', { name: 'Terminal workspaces' });
@@ -71,14 +62,14 @@ test('optional workspace view preserves terminals, editor state and attention na
   await expect(page.getByLabel('Terminal view')).toHaveValue('panes');
   await expect(page.getByTitle('Toggle agent overview')).toHaveAttribute('aria-pressed', 'true');
   await expect(editor).toContainText('retained edit');
-  expect(await calls(page, 'terminal_spawn')).toHaveLength(1);
-  expect(await calls(page, 'terminal_close')).toHaveLength(0);
+  expect(await launches(page, false)).toHaveLength(1);
+  expect(await actions(page, 'pane.remove')).toHaveLength(0);
   await page.getByLabel('Terminal view').selectOption('workspaces');
   await page.getByTitle('Expand terminals', { exact: true }).click();
   await page.screenshot({ path: 'test-results/terminal-workspaces-dark.png' });
   await page.reload();
   await expect(page.getByLabel('Terminal view')).toHaveValue('workspaces');
-  expect(await calls(page, 'terminal_spawn')).toHaveLength(0);
+  expect(await launches(page, false)).toHaveLength(0);
 });
 
 test('saved connections remain disconnected on startup and validate before saving', async ({
@@ -90,12 +81,12 @@ test('saved connections remain disconnected on startup and validate before savin
   await dialog.getByLabel('SSH host').fill('-oProxyCommand=bad');
   await dialog.getByRole('button', { name: 'Save connection' }).click();
   await expect(dialog.getByRole('alert')).toContainText('SSH host');
-  expect(await calls(page, 'terminal_connect_remote')).toHaveLength(0);
+  expect(await calls(page, 'remote_session_args')).toHaveLength(0);
   await dialog.getByLabel('SSH host').fill('dev@buildbox');
   await dialog.getByRole('button', { name: 'Save connection' }).click();
   await dialog.getByRole('button', { name: 'Done' }).click();
   await page.reload();
-  expect(await calls(page, 'terminal_connect_remote')).toHaveLength(0);
+  expect(await calls(page, 'remote_session_args')).toHaveLength(0);
   const restored = await openManager(page);
   await expect(restored).toContainText('dev@buildbox');
   await restored.getByTitle('Edit Build box').click();
@@ -113,34 +104,30 @@ test('cmux attaches once, receives output and input, reconnects and disconnects 
   await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
   const remote = page.getByRole('region', { name: 'Build box terminal' });
   await expect(remote).toBeVisible();
-  expect((await calls(page, 'terminal_connect_remote'))[0]).toMatchObject({
-    root: '/projects/first',
+  expect((await calls(page, 'remote_session_args'))[0]).toMatchObject({
     target: { backend: 'cmux', host: 'dev@buildbox', session: 'agents', binary: 'cmux' },
   });
-  await emit(page, 'pty-1', {
-    type: 'data',
-    data: [...new TextEncoder().encode('REMOTE CLAUDE AND CODEX\r\n')],
-  });
+  await emit(page, 'pane-1', 'REMOTE CLAUDE AND CODEX\r\n');
   await expect(remote).toContainText('REMOTE CLAUDE AND CODEX');
   await remote.locator('.xterm-helper-textarea').focus();
   await page.keyboard.type('status');
-  expect((await calls(page, 'terminal_write')).some(args => args.id === 'pty-1')).toBe(true);
+  expect((await actions(page, 'pane.input')).some(params => params.id === 'pane-1')).toBe(true);
   await page.getByLabel('Terminal view').selectOption('workspaces');
   const again = await openManager(page);
   await again.getByRole('button', { name: 'Show terminal' }).click();
-  expect(await calls(page, 'terminal_connect_remote')).toHaveLength(1);
-  expect(await calls(page, 'codex_account_usage')).toHaveLength(0);
-  await emit(page, 'pty-1', { type: 'exit', code: 255 });
+  expect(await calls(page, 'remote_session_args')).toHaveLength(1);
+  expect(await actions(page, 'account.usage')).toHaveLength(0);
+  await exitPane(page, 'pane-1', 255);
   await expect(remote).toContainText('Disconnected');
   await remote.getByTitle('Reconnect remote session').click();
-  await expect.poll(async () => (await calls(page, 'terminal_connect_remote')).length).toBe(2);
+  await expect.poll(async () => (await actions(page, 'pane.restart')).length).toBe(1);
   await remote.getByTitle('Disconnect Build box', { exact: true }).click();
   const confirm = page.getByRole('dialog', { name: 'Disconnect Build box?' });
   await expect(confirm).toContainText('keeps running');
   await confirm.getByRole('button', { name: 'Disconnect', exact: true }).click();
   await expect(remote).toHaveCount(0);
-  expect(await calls(page, 'terminal_spawn')).toHaveLength(1);
-  expect((await calls(page, 'terminal_close')).some(args => args.id === 'pty-0')).toBe(false);
+  expect(await launches(page, false)).toHaveLength(1);
+  expect((await actions(page, 'pane.remove')).some(params => params.id === 'pane-0')).toBe(false);
   await expect(page.getByRole('region', { name: 'Claude terminal' })).toBeVisible();
 });
 
@@ -160,9 +147,9 @@ test('launching a local agent from a remote space reveals it without disconnecti
     .click();
   await expect(remote).toBeVisible();
   await expect(page.getByRole('region', { name: 'Claude terminal' })).toBeVisible();
-  expect(await calls(page, 'terminal_connect_remote')).toHaveLength(1);
-  expect(await calls(page, 'terminal_spawn')).toHaveLength(1);
-  expect(await calls(page, 'terminal_close')).toHaveLength(0);
+  expect(await launches(page, true)).toHaveLength(1);
+  expect(await launches(page, false)).toHaveLength(1);
+  expect(await actions(page, 'pane.remove')).toHaveLength(0);
 });
 
 test('tmux and custom SSH targets retain their distinct settings and failures remain retryable', async ({
@@ -177,16 +164,18 @@ test('tmux and custom SSH targets retain their distinct settings and failures re
     (window as unknown as Record<string, unknown>).__emdeckRemoteError = 'SSH executable missing';
   });
   await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
-  const remote = page.getByRole('region', { name: 'Tmux box terminal' });
-  await expect(remote).toContainText('SSH executable missing');
-  expect((await calls(page, 'terminal_connect_remote'))[0]).toMatchObject({
+  // A launch that never starts leaves no pane behind; the failure is reported once.
+  await expect(page.getByRole('alert')).toContainText('SSH executable missing');
+  expect((await calls(page, 'remote_session_args'))[0]).toMatchObject({
     target: { backend: 'tmux', binary: '/usr/bin/tmux', port: 2222 },
   });
+  await expect(page.getByRole('region', { name: 'Tmux box terminal' })).toHaveCount(0);
   await page.evaluate(() => {
     (window as unknown as Record<string, unknown>).__emdeckRemoteError = null;
   });
-  await remote.getByTitle('Reconnect remote session').click();
-  await expect(remote).toContainText('SSH client running');
+  dialog = await openManager(page);
+  await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Tmux box terminal' })).toBeVisible();
   dialog = await saveSsh(page, 'shell', 'Custom box');
   await dialog.getByTitle('Edit Custom box').click();
   await dialog.getByLabel('Remote command (optional)').fill('cd /workspace && codex resume');
@@ -196,7 +185,7 @@ test('tmux and custom SSH targets retain their distinct settings and failures re
     .filter({ hasText: 'Custom box' })
     .getByRole('button', { name: 'Connect', exact: true })
     .click();
-  expect((await calls(page, 'terminal_connect_remote')).at(-1)).toMatchObject({
+  expect((await calls(page, 'remote_session_args')).at(-1)).toMatchObject({
     target: { backend: 'shell', command: 'cd /workspace && codex resume', binary: '', session: '' },
   });
 });
@@ -219,6 +208,6 @@ test('Claude Remote Control uses the official browser and never launches a termi
   expect(await calls(page, 'open_external_url')).toEqual([
     { url: 'https://claude.ai/code/session_example' },
   ]);
-  expect(await calls(page, 'terminal_connect_remote')).toHaveLength(0);
-  expect(await calls(page, 'terminal_spawn')).toHaveLength(0);
+  expect(await calls(page, 'remote_session_args')).toHaveLength(0);
+  expect(await actions(page, 'pane.create')).toHaveLength(0);
 });

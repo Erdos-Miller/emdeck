@@ -45,6 +45,8 @@ export const installBackgroundLayout = async (page: Page) => {
             shell: '',
             command: kind,
             resumeOnRestart: false,
+            usageReporting: false,
+            args: [],
           },
           running: true,
           restored: false,
@@ -63,16 +65,21 @@ export const installBackgroundLayout = async (page: Page) => {
       };
     }
     state.__layoutSnapshots = snapshots;
+    // The window's own runtime connection is already open; only background machines are served here.
+    const machines: Record<string, string> = {};
     state.__TAURI_INTERNALS__.invoke = async (command, args = {}) => {
       if (command === 'session_connect') {
-        const connection = (args.target as { kind: string }).kind === 'local' ? 'local' : 'remote';
-        state.__layoutConnections.push(connection);
-        return connection;
+        const machine = (args.target as { kind: string }).kind === 'local' ? 'local' : 'remote';
+        state.__layoutConnections.push(machine);
+        machines[`layout-${machine}`] = machine;
+        return `layout-${machine}`;
       }
+      if (command !== 'session_request' && command !== 'session_disconnect')
+        return original(command, args);
+      const connection = machines[String(args.connection)];
+      if (!connection) return original(command, args);
       if (command === 'session_disconnect') return null;
-      if (command !== 'session_request') return original(command, args);
       const action = args.action as SessionAction;
-      const connection = String(args.connection);
       state.__layoutCalls.push({ connection, action });
       const snapshot = snapshots[connection];
       if (action.method === 'workspace.create') return snapshot.workspaces[0];
@@ -100,6 +107,8 @@ export const installBackgroundLayout = async (page: Page) => {
           reset: action.params.after === null,
           data: action.params.after === null ? btoa(text) : '',
           text,
+          commandSequence: 0,
+          commands: [],
           pane: structuredClone(snapshot.panes.find(pane => pane.id === action.params.id)),
         };
       }

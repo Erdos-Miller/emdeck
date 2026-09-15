@@ -42,18 +42,31 @@ mod tests {
             .call("other", "connection", Action::Ping)
             .unwrap_err()
             .contains("not connected"));
-        assert!(sessions
-            .call(
-                "owner",
-                "connection",
-                Action::Attach {
-                    id: "pane".into(),
-                    client: "owner:another-view".into(),
-                    takeover: false
-                }
-            )
-            .unwrap_err()
-            .contains("Invalid terminal view identity"));
+        for action in [
+            Action::Attach {
+                id: "pane".into(),
+                client: "owner:another-view".into(),
+                takeover: false,
+            },
+            Action::Attachment {
+                id: "pane".into(),
+                client: "owner:another-view".into(),
+                name: "a.png".into(),
+                data: String::new(),
+                offset: 0,
+                total: 1,
+            },
+            Action::InputPaths {
+                id: "pane".into(),
+                client: "owner:another-view".into(),
+                paths: vec!["/tmp/a.png".into()],
+            },
+        ] {
+            assert!(sessions
+                .call("owner", "connection", action)
+                .unwrap_err()
+                .contains("Invalid terminal view identity"));
+        }
         sessions.close_window("other");
         assert!(sessions.windows.lock().unwrap().contains_key("owner"));
         sessions.close_window("owner");
@@ -129,6 +142,8 @@ impl Sessions {
             Action::Attach { client, .. }
             | Action::Detach { client, .. }
             | Action::Input { client, .. }
+            | Action::InputPaths { client, .. }
+            | Action::Attachment { client, .. }
             | Action::Resize { client, .. } => {
                 if client.len() > 36
                     || !client

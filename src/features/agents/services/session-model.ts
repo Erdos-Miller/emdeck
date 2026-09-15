@@ -68,3 +68,16 @@ export const terminalInput = (text: string) =>
       return reply.test(part) ? part.replace(reply, '') : `\u001b${part}`;
     })
     .join('');
+
+const trimEnd = (value: string) => value.replace(/[\\/]+$/, '');
+/** Pane directories are entered relative to the project and stored absolute. */
+export const paneDirectory = (root: string, relative: string) => {
+  const cwd = relative.trim();
+  if (!cwd) return root;
+  const separator = root.includes('\\') && !root.includes('/') ? '\\' : '/';
+  return `${trimEnd(root)}${separator}${cwd.replace(/^[\\/]+/, '')}`;
+};
+export const relativeDirectory = (root: string, cwd: string) => {
+  const base = trimEnd(root);
+  return cwd.startsWith(base) ? trimEnd(cwd.slice(base.length).replace(/^[\\/]+/, '')) : '';
+};

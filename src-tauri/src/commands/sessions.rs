@@ -1,3 +1,4 @@
+use crate::services::remote::{self, SshTarget};
 use crate::services::sessions::{Sessions, Target};
 use emdeck_session::{protocol::Action, Result};
 use tauri::Manager;
@@ -19,6 +20,11 @@ pub(crate) async fn session_forget(window: tauri::Window, credential: String) ->
     tauri::async_runtime::spawn_blocking(move || app.state::<Sessions>().forget(&credential))
         .await
         .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub(crate) async fn remote_session_args(target: SshTarget) -> Result<Vec<String>> {
+    remote::session_args(&target)
 }
 
 #[tauri::command]

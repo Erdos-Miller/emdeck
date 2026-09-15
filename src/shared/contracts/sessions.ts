@@ -1,3 +1,5 @@
+import type { AccountUsage, AgentCommand, AgentUsage } from './workspace';
+
 export type SessionState = 'working' | 'blocked' | 'idle' | 'done' | 'unknown' | 'stopped';
 export type MachineTarget =
   | { kind: 'local' }
@@ -31,6 +33,9 @@ export interface SessionLaunch {
   shell: string;
   command: string;
   resumeOnRestart: boolean;
+  usageReporting: boolean;
+  /** A direct argv, for programs that must never pass through a local shell. */
+  args: string[];
 }
 export interface SessionPane {
   id: string;
@@ -50,6 +55,7 @@ export interface SessionPane {
     reason: string;
     sessionId: string | null;
   };
+  usage?: AgentUsage | null;
 }
 export interface SessionWorkspace {
   id: string;
@@ -63,12 +69,15 @@ export interface SessionSnapshot {
   workspaces: SessionWorkspace[];
   panes: SessionPane[];
 }
+export type SessionCommand = AgentCommand & { sequence: number };
 export interface SessionRead {
   sequence: number;
   reset: boolean;
   data: string;
   text: string;
   pane: SessionPane;
+  commandSequence: number;
+  commands: SessionCommand[];
 }
 export interface SessionMethods {
   'remote.manage': { params: RemoteManagement; result: RemoteSharingStatus | PairingCode };
@@ -89,10 +98,30 @@ export interface SessionMethods {
   'pane.attach': { params: { id: string; client: string; takeover: boolean }; result: SessionPane };
   'pane.detach': { params: { id: string; client: string }; result: null };
   'pane.read': {
-    params: { id: string; after: number | null; wait_ms: number };
+    params: {
+      id: string;
+      after: number | null;
+      wait_ms: number;
+      commands_after: number | null;
+    };
     result: SessionRead;
   };
+  'pane.attachment': {
+    params: {
+      id: string;
+      client: string;
+      name: string;
+      data: string;
+      offset: number;
+      total: number;
+    };
+    result: { input: string | null };
+  };
   'pane.input': { params: { id: string; client: string; text: string }; result: null };
+  'pane.paths': {
+    params: { id: string; client: string; paths: string[] };
+    result: { input: string };
+  };
   'pane.resize': {
     params: { id: string; client: string; cols: number; rows: number };
     result: null;
@@ -101,11 +130,20 @@ export interface SessionMethods {
     params: { id: string; generation: string; state: SessionState; session_id: string | null };
     result: SessionPane;
   };
+  'agent.usage': {
+    params: { id: string; generation: string; usage: AgentUsage };
+    result: null;
+  };
+  'agent.command': {
+    params: { id: string; generation: string; command: AgentCommand };
+    result: null;
+  };
   'agent.prompt': { params: { id: string; generation: string; text: string }; result: null };
   'agent.wait': {
     params: { id: string; generation: string; states: SessionState[]; timeout_ms: number };
     result: { matched: boolean; pane: SessionPane };
   };
+  'account.usage': { params: { provider: 'codex' }; result: AccountUsage };
   'server.stop': { params: undefined; result: null };
 }
 export type SessionAction = {

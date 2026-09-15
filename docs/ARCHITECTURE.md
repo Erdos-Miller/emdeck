@@ -47,10 +47,11 @@ src/
 src-tauri/src/
   lib.rs                  Registration and application startup
   commands/               Window authorization, IPC arguments and dispatch
-  services/               Files, Git, worktrees, PTYs, Markdown and usage
+  services/               Files, Git, worktrees, Markdown and session transport
   state/                  Per-window project authorization and lifetime
 src-tauri/runtime/        Independent session server, CLI, protocol, PTYs,
-                         private storage, lifecycle evidence and SSH bridge
+                         private storage, lifecycle evidence, usage, agent
+                         commands, attachments and SSH bridge
 tests/
   unit/                   In-memory services and transformations
   integration/            Real local process execution
@@ -79,15 +80,18 @@ behavior.
 
 ## Lifetime and performance
 
-The optional Background sessions view is a client of `src-tauri/runtime`. That
-independent crate owns PTYs and bounded VT screen state; desktop windows own
-only connections and input leases. Native session commands scope connection IDs
-to the invoking window and add its identity to input ownership. The local
-capability never reaches React. SSH transports the same concurrent JSON RPC
-without installing or authenticating remote software implicitly. Structural
-server mutations are serialized independently of screen reads and input. The
-standalone server has no Tauri dependency; Windows' embedded fallback runs from
-a private copy so the IDE remains replaceable while agents work. See
+Every terminal is a client of `src-tauri/runtime`, both the Panes view and the
+Background sessions view. That independent crate owns PTYs, bounded VT screen
+state, Claude usage reports, queued agent commands and pasted attachments;
+desktop windows own only connections, views and input leases. A window connects
+to the local server when it opens a project and registers that project root as a
+server workspace. Native session commands scope connection IDs to the invoking
+window and add its identity to input ownership. The local capability never
+reaches React. SSH transports the same concurrent JSON RPC without installing or
+authenticating remote software implicitly. Structural server mutations are
+serialized independently of screen reads and input. The standalone server has no
+Tauri dependency; Windows' embedded fallback runs from a private copy so the IDE
+remains replaceable while agents work. See
 [persistence and automation](PERSISTENT-AGENTS.md).
 
 The runtime's `remote` module owns optional Tailscale-address binding, TLS,
@@ -99,6 +103,15 @@ session service resolves opaque pairing IDs and preserves window ownership;
 React receives public machine metadata only. Sharing is opt-in and cannot alter
 firewall settings or install network software. See
 [direct remote connections](TAILSCALE-SESSIONS.md).
+
+The protocol version is checked for exact equality on both ends. A server from
+an older build is not silently tolerated: it is reported, and stopping it is an
+explicit operation, because a pane that outlives the window it was launched from
+should fail loudly rather than act on mismatched assumptions.
+
+Closing a pane stops and removes it. Closing a window only releases that
+window's input leases, as its close confirmation states: the panes keep running
+on the session server and a window reopening the project reattaches to them.
 
 Opening a second project defaults to a new native window. Replacement resets
 that window's views only after the existing confirmation flow. Native project
@@ -125,7 +138,7 @@ folder. Session-server and reporter CLI modes dispatch before the GUI plugin.
 The production app identifier and storage keys are unchanged. Native acceptance
 builds use an explicitly separate test identifier and WebView profile.
 
-Terminal launch inputs are sampled when its identity/restart counter changes.
+A view is rebuilt when its pane identity or process generation changes.
 Appearance updates reconfigure the existing terminal. Hidden and maximized panes
 remain mounted. CodeMirror samples a document on tab switches and separately
 applies content/theme updates, preserving per-file undo history.
@@ -175,24 +188,26 @@ attention filter, so an old query cannot conceal a waiting job. Expanded search
 text is restored on expansion. Mini jobs retain status icons, accessible names,
 full hover details and keyboard focus; their list scrolls independently.
 
-Desktop terminals observe xterm's OSC title events and publish bounded plain
+An attached view observes xterm's OSC title events and publishes bounded plain
 text metadata without changing pane identity or launch inputs. The agents
 service selects a manual name, reported title or launch label, in that order.
-The session server captures the same title sequences through its VT parser and
-includes optional title metadata in snapshots and reads, including for detached
-clients. Title changes notify snapshot listeners without triggering disk writes.
-New process generations clear the previous title; older stored sessions without
-the field remain compatible.
+The session server captures the same title sequences through its VT parser, so
+snapshots and reads carry a title for clients with no attached view. Title
+changes notify snapshot listeners without triggering disk writes. New process
+generations clear the previous title; older stored sessions without the field
+remain compatible.
 
 Terminal attachment listeners share the xterm lifetime. Native drop coordinates
 select the visible pane under the pointer; browser clipboard/file events feed a
-serialized, bounded staging queue. Native commands authorize the invoking
-window's live PTY before storing bytes or quoting paths for its launch shell.
-Each PTY owns a private temporary attachment directory, removed with the
-process. Paths are inserted through xterm's paste API without a newline. Pending
-uploads cannot write into a closed or restarted pane. Remote and background
-views show an explicit unsupported-transfer message and leave text input and
-leases intact.
+serialized, bounded staging queue. Bytes reach the pane's machine as ordered
+chunks on the session protocol, so a file pasted into a background or SSH-hosted
+pane lands where that process can read it. The server holds the input lease
+before staging, and it quotes the saved path for the pane's own shell. Each pane
+owns a private temporary attachment directory, removed with the process. Paths
+are inserted through xterm's paste API without a newline. Pending uploads cannot
+write into a closed or restarted pane. A pane whose program is an SSH or WSL
+client still reports an explicit unsupported-transfer message, because its
+visible filesystem is not the one holding the file.
 
 Both terminal views use one keyboard adapter owned by the xterm instance. A pure
 service selects shortcut ownership. Paste gestures bypass xterm's control

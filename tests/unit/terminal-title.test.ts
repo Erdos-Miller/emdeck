@@ -28,6 +28,8 @@ describe('terminal titles', () => {
       shell: '',
       command: 'claude',
       resumeOnRestart: false,
+      usageReporting: false,
+      args: [],
     };
     expect(sessionName({ launch })).toBe('Claude');
     expect(sessionName({ launch, title: 'Detached task' })).toBe('Detached task');

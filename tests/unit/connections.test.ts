@@ -102,6 +102,7 @@ describe('remote connection configuration', () => {
   it('groups local working folders separately from remote hosts with the same display name', () => {
     const pane: Pane = {
       id: 'local',
+      generation: 'g',
       name: 'Claude',
       cwd: '',
       command: 'claude',

@@ -1,5 +1,4 @@
 import type {
-  AccountUsage,
   BranchComparison,
   BranchRequest,
   CreateWorktree,
@@ -27,6 +26,7 @@ export interface DesktopCommands {
   session_connect: Command<{ target: MachineTarget }, string>;
   session_request: Command<{ connection: string; action: SessionAction }, unknown>;
   session_disconnect: Command<{ connection: string }, void>;
+  remote_session_args: Command<{ target: SshTarget }, string[]>;
   open_project: Command<{ path: string }, OpenProjectResult>;
   open_project_window: Command<{ path: string }, OpenWindowResult>;
   focus_project_window: Command<{ path: string }, string | null>;
@@ -64,28 +64,6 @@ export interface DesktopCommands {
   shelf_create: Command<Repository & { name: string; paths: string[] }, Shelf>;
   shelf_apply: Command<Repository & { id: string; force: boolean }, UnshelveReport>;
   shelf_delete: Command<Repository & { id: string }, void>;
-  terminal_spawn: Command<
-    Repository & {
-      cwd: string;
-      shell: string;
-      command: string;
-      cols: number;
-      rows: number;
-      enhancedUsage: boolean;
-      onEvent: unknown;
-    },
-    string
-  >;
-  terminal_write: Command<{ id: string; data: string }, void>;
-  terminal_attachment: Command<{ id: string; name: string; data: number[] }, string>;
-  terminal_path_input: Command<{ id: string; paths: string[] }, string>;
-  terminal_connect_remote: Command<
-    Repository & { target: SshTarget; cols: number; rows: number; onEvent: unknown },
-    string
-  >;
-  terminal_resize: Command<{ id: string; cols: number; rows: number }, void>;
-  terminal_close: Command<{ id: string }, void>;
-  codex_account_usage: Command<Record<string, never>, AccountUsage>;
 }
 
 export type DesktopCommand = keyof DesktopCommands;

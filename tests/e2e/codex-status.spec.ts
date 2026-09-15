@@ -1,14 +1,8 @@
 import { test, expect } from './fixtures/desktop';
 import type { Page } from './fixtures/desktop';
+import { actionCount, emit } from './fixtures/session';
 
-const output = async (page: Page, data: string) =>
-  page.evaluate(data => {
-    (
-      window as unknown as {
-        __emdeckEmitTerminal: (id: string, event: { type: string; data: number[] }) => void;
-      }
-    ).__emdeckEmitTerminal('pty-0', { type: 'data', data: [...new TextEncoder().encode(data)] });
-  }, data);
+const output = async (page: Page, data: string) => emit(page, 'pane-0', data);
 
 const screen = (page: Page, text: string, title?: string) =>
   output(
@@ -104,11 +98,8 @@ test('Codex approvals and question forms appear in attention, including freeform
   await page.keyboard.press('Escape');
   await screen(page, `Turn interrupted.\r\n${composer}`, 'example');
   await expect(row).toContainText('Ready');
-  const calls = await page.evaluate(
-    () => (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls
-  );
-  expect(calls.filter(call => call.command === 'terminal_spawn')).toHaveLength(1);
-  expect(calls.filter(call => call.command === 'terminal_close')).toHaveLength(0);
+  expect(await actionCount(page, 'pane.create')).toBe(1);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
 });
 
 test('Codex question footer survives a narrow terminal and hidden activity titles use conservative fallback', async ({

@@ -1,16 +1,25 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import type { TerminalEvent } from '../../src/shared/contracts/workspace';
+import { sessionServer } from './fixtures/desktop';
+import { actionCount, actions, emit, exitPane, paneUsage } from './fixtures/session';
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript({ path: sessionServer });
   await page.addInitScript(() => {
     const state = window as unknown as Record<string, unknown>;
     const calls: { command: string; args: Record<string, unknown> }[] = [];
-    const channels = new Map<string, { onmessage: (event: unknown) => void }>();
     let serial = 0;
     state.isTauri = true;
     state.__calls = calls;
-    state.__emit = (id: string, event: unknown) => channels.get(id)!.onmessage(event);
+    state.__emdeckAccountUsage = {
+      source: 'Codex CLI account',
+      updatedAt: Date.now() / 1000,
+      limits: [
+        { label: 'Codex · 5h', usedPercent: 25, resetsAt: Date.now() / 1000 + 3600 },
+        { label: 'Codex · 7d', usedPercent: 0, resetsAt: null },
+        { label: 'Expired window', usedPercent: 80, resetsAt: 1 },
+      ],
+    };
     state.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
     state.__TAURI_INTERNALS__ = {
       metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },
@@ -36,22 +45,14 @@ test.beforeEach(async ({ page }) => {
               changes: [],
               commits: [],
             };
-          case 'terminal_spawn': {
-            const id = `pty-${channels.size}`;
-            channels.set(id, args.onEvent as { onmessage: (event: unknown) => void });
-            return id;
-          }
-          case 'codex_account_usage':
-            if (state.__quotaError) throw 'CLI unavailable. Try again.';
-            return {
-              source: 'Codex CLI account',
-              updatedAt: Date.now() / 1000,
-              limits: [
-                { label: 'Codex · 5h', usedPercent: 25, resetsAt: Date.now() / 1000 + 3600 },
-                { label: 'Codex · 7d', usedPercent: 0, resetsAt: null },
-                { label: 'Expired window', usedPercent: 80, resetsAt: 1 },
-              ],
-            };
+          case 'session_connect':
+            return 'session-0';
+          case 'session_disconnect':
+            return null;
+          case 'session_request':
+            return (
+              state.__emdeckSession as { request: (action: unknown) => Promise<unknown> }
+            ).request(args.action);
           case 'plugin:event|listen':
             return args.handler;
           default:
@@ -71,25 +72,6 @@ async function launch(page: Page, name: string) {
     .click();
   await expect(page.getByRole('region', { name: `${name} terminal`, exact: true })).toBeVisible();
 }
-async function emit(page: Page, id: string, event: TerminalEvent) {
-  await page.evaluate(
-    ({ id, event }) =>
-      (window as unknown as { __emit: (id: string, event: TerminalEvent) => void }).__emit(
-        id,
-        event
-      ),
-    { id, event }
-  );
-}
-async function countCalls(page: Page, command: string) {
-  return page.evaluate(
-    command =>
-      (window as unknown as { __calls: { command: string }[] }).__calls.filter(
-        c => c.command === command
-      ).length,
-    command
-  );
-}
 
 test('streaming panes follow output through resizing and preserve manual scrollback', async ({
   page,
@@ -97,7 +79,7 @@ test('streaming panes follow output through resizing and preserve manual scrollb
   const panes = page.locator('.terminal-pane');
   const output = async (index: number, start: number, end: number) => {
     const text = Array.from({ length: end - start }, (_, row) => `ROW ${start + row}\r\n`).join('');
-    await emit(page, `pty-${index}`, { type: 'data', data: [...new TextEncoder().encode(text)] });
+    await emit(page, `pane-${index}`, text);
   };
   for (let index = 0; index < 6; index++) {
     await page.getByRole('button', { name: 'New terminal', exact: true }).click();
@@ -136,8 +118,8 @@ test('streaming panes follow output through resizing and preserve manual scrollb
   await expect.poll(inHistory).toBe(false);
   await output(0, 300, 320);
   await expect(first.locator('.xterm-rows')).toContainText('ROW 319');
-  expect(await countCalls(page, 'terminal_spawn')).toBe(6);
-  expect(await countCalls(page, 'terminal_close')).toBe(0);
+  expect(await actionCount(page, 'pane.create')).toBe(6);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
 });
 const usage = {
   source: 'Claude status line',
@@ -158,7 +140,7 @@ test('live usage, approval focus and rename preserve both terminal sessions', as
   await launch(page, 'Claude');
   await launch(page, 'Codex');
   const claude = page.getByRole('article', { name: 'Claude agent', exact: true });
-  await emit(page, 'pty-0', { type: 'usage', usage });
+  await paneUsage(page, 'pane-0', usage);
   await expect(claude).toContainText('12K / 600');
   await expect(claude).toContainText('$0.000');
   await expect(claude).toContainText('88% left');
@@ -168,7 +150,7 @@ test('live usage, approval focus and rename preserve both terminal sessions', as
   await terminal.evaluate(el => el.setAttribute('data-preserved', 'yes'));
   const prompt =
     '\x1b[2J\x1b[H\x1b[999;1HWould you like to run the following command?\r\n❯ 1. Yes\r\n  2. No';
-  await emit(page, 'pty-1', { type: 'data', data: Array.from(new TextEncoder().encode(prompt)) });
+  await emit(page, 'pane-1', prompt);
   await expect(page.getByRole('article', { name: 'Codex agent', exact: true })).toContainText(
     'Needs attention'
   );
@@ -184,9 +166,9 @@ test('live usage, approval focus and rename preserve both terminal sessions', as
   await expect(
     page.getByRole('region', { name: 'UI builder terminal' }).locator('.xterm')
   ).toHaveAttribute('data-preserved', 'yes');
-  expect(await countCalls(page, 'terminal_spawn')).toBe(2);
-  expect(await countCalls(page, 'terminal_close')).toBe(0);
-  expect(await countCalls(page, 'codex_account_usage')).toBe(0);
+  expect(await actionCount(page, 'pane.create')).toBe(2);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
+  expect(await actionCount(page, 'account.usage')).toBe(0);
   await page.getByTitle('Expand terminals', { exact: true }).click();
   await page.screenshot({ path: 'test-results/agents-live-dark.png' });
   expect(errors).toEqual([]);
@@ -197,7 +179,7 @@ test('customization persists; filtering and hiding details leave sessions alive'
 }) => {
   await launch(page, 'Claude');
   await launch(page, 'Terminal');
-  await emit(page, 'pty-0', { type: 'usage', usage });
+  await paneUsage(page, 'pane-0', usage);
   await page.getByTitle('Customize agent overview').click();
   await page.getByLabel('Estimated session cost', { exact: true }).uncheck();
   await page.getByLabel('Include shell terminals', { exact: true }).uncheck();
@@ -213,7 +195,7 @@ test('customization persists; filtering and hiding details leave sessions alive'
   await page.getByLabel('Find agents').fill('no match');
   await expect(page.getByText('No sessions match these filters.')).toBeVisible();
   await page.getByLabel('Find agents').clear();
-  expect(await countCalls(page, 'terminal_close')).toBe(0);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
   await page.reload();
   await page.getByTitle('Customize agent overview').click();
   await expect(page.getByLabel('Estimated session cost', { exact: true })).not.toBeChecked();
@@ -221,13 +203,8 @@ test('customization persists; filtering and hiding details leave sessions alive'
   await expect(page.getByLabel('Claude usage integration', { exact: true })).not.toBeChecked();
   await page.getByTitle('Customize agent overview').click();
   await launch(page, 'Claude');
-  const enhanced = await page.evaluate(
-    () =>
-      (
-        window as unknown as { __calls: { command: string; args: { enhancedUsage: boolean } }[] }
-      ).__calls.find(c => c.command === 'terminal_spawn')!.args.enhancedUsage
-  );
-  expect(enhanced).toBe(false);
+  const launches = await actions(page, 'pane.create');
+  expect((launches.at(-1)!.launch as { usageReporting: boolean }).usageReporting).toBe(false);
 });
 
 test('account refresh is explicit, supports zero and stale windows, and recovers from errors', async ({
@@ -235,21 +212,22 @@ test('account refresh is explicit, supports zero and stale windows, and recovers
 }) => {
   await launch(page, 'Codex');
   const account = page.getByRole('region', { name: 'Codex account usage' });
-  expect(await countCalls(page, 'codex_account_usage')).toBe(0);
+  expect(await actionCount(page, 'account.usage')).toBe(0);
   await page.getByTitle('Refresh Codex account usage').click();
   await expect(account).toContainText('75% left');
   await expect(account).toContainText('100% left');
   await expect(account).toContainText('Refresh needed');
   await expect(account).toContainText('Reset time not reported');
   await page.evaluate(() => {
-    (window as unknown as Record<string, unknown>).__quotaError = true;
+    (window as unknown as Record<string, unknown>).__emdeckAccountError =
+      'CLI unavailable. Try again.';
   });
   await page.getByTitle('Refresh Codex account usage').click();
   await expect(account.getByRole('alert')).toContainText('CLI unavailable');
   await expect(account).toContainText('previous reading');
   await expect(account).toContainText('75% left');
   await page.evaluate(() => {
-    (window as unknown as Record<string, unknown>).__quotaError = false;
+    (window as unknown as Record<string, unknown>).__emdeckAccountError = undefined;
   });
   await page.getByTitle('Refresh Codex account usage').click();
   await expect(account.getByRole('alert')).toHaveCount(0);
@@ -260,8 +238,8 @@ test('restarting through the terminal header clears old usage and respawns only 
 }) => {
   await launch(page, 'Claude');
   await launch(page, 'Codex');
-  await emit(page, 'pty-0', { type: 'usage', usage });
-  await emit(page, 'pty-0', { type: 'exit', code: 0 });
+  await paneUsage(page, 'pane-0', usage);
+  await exitPane(page, 'pane-0', 0);
   const card = page.getByRole('article', { name: 'Claude agent' });
   await expect(card).toContainText('Exited');
   await page
@@ -270,8 +248,9 @@ test('restarting through the terminal header clears old usage and respawns only 
     .click();
   await expect(card).not.toContainText('Opus 4.6');
   await expect(card).toContainText('Waiting for Claude usage');
-  expect(await countCalls(page, 'terminal_spawn')).toBe(3);
-  expect(await countCalls(page, 'terminal_close')).toBe(0);
+  expect(await actionCount(page, 'pane.create')).toBe(2);
+  expect(await actionCount(page, 'pane.restart')).toBe(1);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
 });
 
 test('optional quota polling pauses when the overview or terminal panel is hidden', async ({
@@ -282,18 +261,18 @@ test('optional quota polling pauses when the overview or terminal panel is hidde
   await launch(page, 'Codex');
   await page.getByTitle('Customize agent overview').click();
   await page.getByLabel('Codex quota refresh', { exact: true }).selectOption('60');
-  await expect.poll(() => countCalls(page, 'codex_account_usage')).toBe(1);
+  await expect.poll(() => actionCount(page, 'account.usage')).toBe(1);
   await page.getByTitle('Hide agent overview').click();
   await page.clock.fastForward(61000);
-  expect(await countCalls(page, 'codex_account_usage')).toBe(1);
+  expect(await actionCount(page, 'account.usage')).toBe(1);
   await page.getByTitle('Toggle agent overview').click();
-  await expect.poll(() => countCalls(page, 'codex_account_usage')).toBe(2);
+  await expect.poll(() => actionCount(page, 'account.usage')).toBe(2);
   await page.getByTitle('Hide terminals (sessions keep running)').click();
   await page.clock.fastForward(61000);
-  expect(await countCalls(page, 'codex_account_usage')).toBe(2);
+  expect(await actionCount(page, 'account.usage')).toBe(2);
   await page.getByTitle('Toggle terminal panel', { exact: true }).click();
-  await expect.poll(() => countCalls(page, 'codex_account_usage')).toBe(3);
+  await expect.poll(() => actionCount(page, 'account.usage')).toBe(3);
   await page.clock.fastForward(61000);
-  await expect.poll(() => countCalls(page, 'codex_account_usage')).toBe(4);
-  expect(await countCalls(page, 'terminal_spawn')).toBe(1);
+  await expect.poll(() => actionCount(page, 'account.usage')).toBe(4);
+  expect(await actionCount(page, 'pane.create')).toBe(1);
 });

@@ -1,21 +1,16 @@
-import { Channel, invoke, isTauri } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import type {
   CommandArguments,
   CommandResult,
   DesktopCommand,
 } from '../../shared/contracts/desktop';
-import type {
-  BranchRequest,
-  CreateWorktree,
-  TerminalEvent,
-} from '../../shared/contracts/workspace';
-import type { SshTarget } from '../../shared/contracts/remote';
+import type { BranchRequest, CreateWorktree } from '../../shared/contracts/workspace';
 import type { ConflictResolution } from '../../shared/contracts/gitConflicts';
 import type { DiscardRequest } from '../../shared/contracts/gitDiscard';
 export const native = isTauri();
 export async function call<C extends DesktopCommand>(
   command: C,
-  ...parameters: C extends 'startup_project' | 'codex_account_usage'
+  ...parameters: C extends 'startup_project'
     ? [args?: CommandArguments<C>]
     : [args: CommandArguments<C>]
 ): Promise<CommandResult<C>> {
@@ -58,29 +53,3 @@ export const api = {
     call('shelf_apply', { root, id, force }),
   deleteShelf: (root: string, id: string) => call('shelf_delete', { root, id }),
 };
-export async function spawnTerminal(
-  root: string,
-  cwd: string,
-  shell: string,
-  command: string,
-  cols: number,
-  rows: number,
-  onEvent: (event: TerminalEvent) => void,
-  enhancedUsage = false,
-  remote?: SshTarget
-) {
-  const channel = new Channel<TerminalEvent>();
-  channel.onmessage = onEvent;
-  if (remote)
-    return call('terminal_connect_remote', { root, target: remote, cols, rows, onEvent: channel });
-  return call('terminal_spawn', {
-    root,
-    cwd,
-    shell,
-    command,
-    cols,
-    rows,
-    onEvent: channel,
-    enhancedUsage,
-  });
-}

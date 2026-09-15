@@ -1,5 +1,4 @@
 use crate::services::project_identity::{canonical_folder, launch_folder};
-use crate::services::terminal::WindowTerminals;
 use crate::services::workspace::{err, Result};
 use crate::state::Projects;
 use serde::Serialize;
@@ -58,7 +57,6 @@ pub(crate) fn focus_existing(
 pub(crate) fn open(app: &AppHandle, path: &Path) -> Result<OpenWindow> {
     let root = canonical_folder(path)?;
     let projects = app.state::<Projects>();
-    let terminals = app.state::<WindowTerminals>();
     let _routing = projects.routing.lock().map_err(err)?;
     if let Some(label) = existing(app, &root)? {
         focus(app, &label)?;
@@ -84,7 +82,6 @@ pub(crate) fn open(app: &AppHandle, path: &Path) -> Result<OpenWindow> {
             .lock()
             .map_err(err)?
             .insert(label.clone(), root.to_string_lossy().into_owned());
-        terminals.register(&label)?;
         let name = root
             .file_name()
             .unwrap_or(root.as_os_str())
@@ -100,7 +97,6 @@ pub(crate) fn open(app: &AppHandle, path: &Path) -> Result<OpenWindow> {
     };
     if let Err(error) = build() {
         projects.forget(&label);
-        terminals.close_window(&label);
         return Err(error);
     }
     focus(app, &label)?;

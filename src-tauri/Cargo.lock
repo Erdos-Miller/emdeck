@@ -984,7 +984,6 @@ dependencies = [
  "base64 0.22.1",
  "emdeck-session",
  "glib",
- "portable-pty",
  "same-file",
  "serde",
  "serde_json",

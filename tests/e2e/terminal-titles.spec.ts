@@ -1,17 +1,8 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures/desktop';
+import { actions, emit as emitPane, exitPane } from './fixtures/session';
 
-const emit = async (page: Page, text: string) => {
-  await page.evaluate(text => {
-    const state = window as unknown as {
-      __emdeckEmitTerminal: (id: string, event: unknown) => void;
-    };
-    state.__emdeckEmitTerminal('pty-0', {
-      type: 'data',
-      data: Array.from(new TextEncoder().encode(text)),
-    });
-  }, text);
-};
+const emit = (page: Page, text: string) => emitPane(page, 'pane-0', text);
 
 test('agent titles update headers, cards and workspace lists without restarting sessions', async ({
   page,
@@ -54,11 +45,8 @@ test('agent titles update headers, cards and workspace lists without restarting 
   await emit(page, '\x1b]2;\x07');
   await expect(terminal).toHaveAccessibleName('Claude terminal');
   await expect(terminal.locator('.xterm')).toHaveAttribute('data-retained', 'true');
-  const calls = await page.evaluate(
-    () => (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls
-  );
-  expect(calls.filter(call => call.command === 'terminal_spawn')).toHaveLength(1);
-  expect(calls.filter(call => call.command === 'terminal_close')).toHaveLength(0);
+  expect(await actions(page, 'pane.create')).toHaveLength(1);
+  expect(await actions(page, 'pane.remove')).toHaveLength(0);
 });
 
 test('long terminal titles stay readable without hiding pane controls and clear on restart', async ({
@@ -74,11 +62,7 @@ test('long terminal titles stay readable without hiding pane controls and clear 
   await expect(terminal.locator('.pane-header strong')).toHaveText(title.slice(0, 200).trim());
   await expect(terminal.getByTitle('Maximize pane', { exact: true })).toBeInViewport({ ratio: 1 });
   await expect(terminal.locator('.pane-header button').last()).toBeInViewport({ ratio: 1 });
-  await page.evaluate(() =>
-    (
-      window as unknown as { __emdeckEmitTerminal: (id: string, event: unknown) => void }
-    ).__emdeckEmitTerminal('pty-0', { type: 'exit', code: 0 })
-  );
+  await exitPane(page, 'pane-0', 0);
   await terminal.getByTitle('Restart terminal', { exact: true }).click();
   await expect(terminal).toHaveAccessibleName('Terminal terminal');
 });

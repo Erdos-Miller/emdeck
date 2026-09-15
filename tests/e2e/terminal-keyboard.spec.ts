@@ -1,13 +1,9 @@
 import { expect, test } from './fixtures/desktop';
 import { installTerminalClipboard } from './fixtures/terminal-clipboard';
 import type { Page } from './fixtures/desktop';
+import { actions, emit } from './fixtures/session';
 
-const writes = (page: Page) =>
-  page.evaluate(() =>
-    (
-      window as unknown as { __emdeckCalls: { command: string; args: { data?: string } }[] }
-    ).__emdeckCalls.flatMap(call => (call.command === 'terminal_write' ? [call.args.data] : []))
-  );
+const writes = async (page: Page) => (await actions(page, 'pane.input')).map(params => params.text);
 
 test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: 'New terminal', exact: true }).click();
@@ -19,14 +15,7 @@ test.beforeEach(async ({ page }) => {
 test('paste keys reach native clipboard handling once, preserving multiline bracketed paste', async ({
   page,
 }) => {
-  await page.evaluate(() =>
-    (
-      window as unknown as { __emdeckEmitTerminal: (id: string, event: unknown) => void }
-    ).__emdeckEmitTerminal('pty-0', {
-      type: 'data',
-      data: Array.from(new TextEncoder().encode('\x1b[?2004hREADY')),
-    })
-  );
+  await emit(page, 'pane-0', '\x1b[?2004hREADY');
   await expect(page.locator('.terminal-host')).toContainText('READY');
   const input = page.locator('.xterm-helper-textarea');
   await installTerminalClipboard(input);
@@ -54,14 +43,8 @@ test('Ctrl+V retains image paste instead of falling back to text-only clipboard 
   page,
 }) => {
   await page.evaluate(() => {
-    const state = window as unknown as {
-      __TAURI_INTERNALS__: { invoke: (command: string, args?: unknown) => Promise<unknown> };
-    };
-    const original = state.__TAURI_INTERNALS__.invoke;
-    state.__TAURI_INTERNALS__.invoke = async (command, args) => {
-      const result = await original(command, args);
-      return command === 'terminal_attachment' ? "'C:/fixture/fixture.png' " : result;
-    };
+    (window as unknown as Record<string, unknown>).__emdeckAttachmentInput =
+      "'C:/fixture/fixture.png' ";
   });
   await installTerminalClipboard(page.locator('.xterm-helper-textarea'), true);
   await page.keyboard.press('Control+v');

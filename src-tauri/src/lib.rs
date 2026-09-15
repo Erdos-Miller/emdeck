@@ -2,7 +2,6 @@ mod commands;
 mod services;
 mod state;
 mod windows;
-use services::{agent_command, agent_usage, terminal};
 use state::Projects;
 use tauri::Manager;
 
@@ -14,20 +13,12 @@ pub fn run() {
         }
         return;
     }
-    if agent_usage::report_cli() || agent_command::command_cli() {
-        return;
-    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(windows::reopen))
         .plugin(tauri_plugin_dialog::init())
         .manage(Projects::default())
         .manage(services::sessions::Sessions::default())
-        .manage(emdeck_session::codex::UsageCache::default())
-        .manage(terminal::WindowTerminals::default())
         .setup(|app| {
-            app.state::<terminal::WindowTerminals>()
-                .register("main")
-                .map_err(std::io::Error::other)?;
             let args = std::env::args().collect::<Vec<_>>();
             let cwd = std::env::current_dir()?;
             match services::project_identity::launch_folder(&args, &cwd) {
@@ -67,10 +58,6 @@ pub fn run() {
                     .app_handle()
                     .state::<Projects>()
                     .forget(window.label());
-                window
-                    .app_handle()
-                    .state::<terminal::WindowTerminals>()
-                    .close_window(window.label());
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -79,6 +66,7 @@ pub fn run() {
             commands::sessions::session_forget,
             commands::sessions::session_request,
             commands::sessions::session_disconnect,
+            commands::sessions::remote_session_args,
             commands::projects::open_project,
             commands::projects::startup_project,
             commands::projects::open_project_window,
@@ -109,29 +97,21 @@ pub fn run() {
             commands::shelves::shelf_list,
             commands::shelves::shelf_create,
             commands::shelves::shelf_apply,
-            commands::shelves::shelf_delete,
-            commands::terminal::terminal_spawn,
-            commands::terminal::terminal_connect_remote,
-            commands::terminal::terminal_write,
-            commands::terminal::terminal_attachment,
-            commands::terminal::terminal_path_input,
-            commands::terminal::terminal_resize,
-            commands::terminal::terminal_close,
-            commands::usage::codex_account_usage
+            commands::shelves::shelf_delete
         ])
         .build(tauri::generate_context!())
         .expect("Could not start Emdeck")
-        .run(|app, event| {
+        .run(|_app, _event| {
             #[cfg(target_os = "macos")]
-            match &event {
+            match &_event {
                 tauri::RunEvent::Reopen { .. } => {
-                    windows::reopen(app, vec!["emdeck".into()], String::new())
+                    windows::reopen(_app, vec!["emdeck".into()], String::new())
                 }
                 tauri::RunEvent::Opened { urls } => {
                     for url in urls {
                         if let Ok(path) = url.to_file_path() {
                             windows::reopen(
-                                app,
+                                _app,
                                 vec![
                                     "emdeck".into(),
                                     "--project".into(),
@@ -143,9 +123,6 @@ pub fn run() {
                     }
                 }
                 _ => {}
-            }
-            if matches!(event, tauri::RunEvent::Exit) {
-                app.state::<terminal::WindowTerminals>().close_all();
             }
         });
 }

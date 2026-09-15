@@ -30,7 +30,6 @@ type Dependencies = Pick<
   | 'setPanes'
   | 'setPaneStates'
   | 'setAgentObservations'
-  | 'setAgentUsage'
   | 'setSelectedPane'
   | 'setMaxPane'
   | 'setTerminalFull'
@@ -58,7 +57,6 @@ export function useProjectActions({
   setPanes,
   setPaneStates,
   setAgentObservations,
-  setAgentUsage,
   setSelectedPane,
   setMaxPane,
   setTerminalFull,
@@ -134,7 +132,6 @@ export function useProjectActions({
       setPanes([]);
       setPaneStates({});
       setAgentObservations({});
-      setAgentUsage({});
       setSelectedPane(null);
       setMaxPane(null);
       setTerminalFull(false);
@@ -156,6 +153,7 @@ export function useProjectActions({
         setPanes([
           {
             id: 'preview-codex',
+            generation: 'preview',
             name: 'Codex',
             command: 'codex',
             cwd: '',
@@ -164,6 +162,7 @@ export function useProjectActions({
           },
           {
             id: 'preview-claude',
+            generation: 'preview',
             name: 'Claude',
             command: 'claude',
             cwd: '',
@@ -172,6 +171,7 @@ export function useProjectActions({
           },
           {
             id: 'preview-shell',
+            generation: 'preview',
             name: 'Terminal',
             command: '',
             cwd: '',

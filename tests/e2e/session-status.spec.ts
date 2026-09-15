@@ -1,31 +1,18 @@
 import { test, expect } from './fixtures/desktop';
 import type { Page } from './fixtures/desktop';
-import type { TerminalEvent } from '../../src/shared/contracts/workspace';
-
-const emit = async (page: Page, id: number, event: TerminalEvent) =>
-  page.evaluate(
-    ({ id, event }) => {
-      (
-        window as unknown as { __emdeckEmitTerminal: (id: string, event: TerminalEvent) => void }
-      ).__emdeckEmitTerminal(`pty-${id}`, event);
-    },
-    { id, event }
-  );
+import { actionCount, actions, emit, exitPane } from './fixtures/session';
 
 const screen = async (page: Page, id: number, text: string) =>
-  emit(page, id, {
-    type: 'data',
-    data: [...new TextEncoder().encode(`\x1b[2J\x1b[H\x1b[999;1H${text}`)],
-  });
+  emit(page, `pane-${id}`, `\x1b[2J\x1b[H\x1b[999;1H${text}`);
+
+const columns = async (page: Page) =>
+  ((await actions(page, 'pane.resize')).at(-1) as { cols: number }).cols;
 
 const launch = async (page: Page, id: number, title: string) => {
   await page.getByRole('button', { name: 'New terminal', exact: true }).click();
   await page.getByRole('button', { name: 'Claude Claude Code' }).click();
   await expect(page.locator('.terminal-pane')).toHaveCount(id + 1);
-  await emit(page, id, {
-    type: 'data',
-    data: [...new TextEncoder().encode(`\x1b]2;${title}\x07`)],
-  });
+  await emit(page, `pane-${id}`, `\x1b]2;${title}\x07`);
   await expect(page.getByRole('region', { name: `${title} terminal`, exact: true })).toBeVisible();
 };
 
@@ -166,7 +153,7 @@ test('attention includes questions and approvals and clears when agents resume o
   await screen(page, 0, 'Working...\r\nEsc to interrupt');
   await expect(rail.locator('.rail-session')).toHaveCount(1);
   await expect(questionTerminal).toBeVisible();
-  await emit(page, 1, { type: 'exit', code: 0 });
+  await exitPane(page, 'pane-1', 0);
   await expect(rail.locator('.rail-session')).toHaveCount(0);
   await expect(rail.getByLabel('0 sessions need attention')).toBeVisible();
   await attention.click();
@@ -178,11 +165,8 @@ test('attention includes questions and approvals and clears when agents resume o
   await expect(rail.getByTitle('Focus Architecture', { exact: true })).toContainText('Ready');
   await expect(rail.getByTitle('Focus Permissions', { exact: true })).toContainText('Exited');
   await expect(page.locator('.xterm[data-preserved="yes"]')).toHaveCount(4);
-  const calls = await page.evaluate(
-    () => (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls
-  );
-  expect(calls.filter(call => call.command === 'terminal_spawn')).toHaveLength(4);
-  expect(calls.filter(call => call.command === 'terminal_close')).toHaveLength(0);
+  expect(await actionCount(page, 'pane.create')).toBe(4);
+  expect(await actionCount(page, 'pane.remove')).toBe(0);
 });
 
 test('live work above the composer stays visible in status across tall screens, soft wraps and output pauses', async ({
@@ -196,21 +180,13 @@ test('live work above the composer stays visible in status across tall screens, 
     .getByTitle('Focus Live work', { exact: true });
   await screen(page, 0, '❯');
   await expect(row).toContainText('Ready');
-  const cols = await page.evaluate(() => {
-    const calls = (
-      window as unknown as { __emdeckCalls: { command: string; args: { cols: number } }[] }
-    ).__emdeckCalls;
-    return calls.filter(call => call.command === 'terminal_resize').at(-1)!.args.cols;
-  });
+  const cols = await columns(page);
   // Split the interrupt label at a real xterm soft wrap, without a known verb.
   await screen(page, 0, `${' '.repeat(cols - 3)}esc to interrupt\r\n❯`);
   await expect(row).toContainText('Working');
   await screen(page, 0, '✻ Cooked for 2s\r\n❯');
   await expect(row).toContainText('Ready');
-  await emit(page, 0, {
-    type: 'data',
-    data: [...new TextEncoder().encode('\x1b[2J\x1b[H✻ Channelling…\r\n❯\r\n? for shortcuts')],
-  });
+  await emit(page, 'pane-0', '\x1b[2J\x1b[H✻ Channelling…\r\n❯\r\n? for shortcuts');
   await expect(row).toContainText('Working');
   await screen(page, 0, `✢ Percolating…${'\r\n'.repeat(19)}❯\r\n? for shortcuts`);
   await expect(row).toContainText('Working');
@@ -312,12 +288,7 @@ test('a wrapped Claude done footer supersedes an old working row without a visib
     .getByTitle('Focus Wrapped completion', { exact: true });
   await screen(page, 0, '✻ Channelling…\r\n❯');
   await expect(row).toContainText('Working');
-  const cols = await page.evaluate(() => {
-    const calls = (
-      window as unknown as { __emdeckCalls: { command: string; args: { cols: number } }[] }
-    ).__emdeckCalls;
-    return calls.filter(call => call.command === 'terminal_resize').at(-1)!.args.cols;
-  });
+  const cols = await columns(page);
   await screen(
     page,
     0,

@@ -1,17 +1,17 @@
+import { fileURLToPath } from 'node:url';
 import { test as base, expect } from '@playwright/test';
 import capabilities from '../../../src-tauri/capabilities/default.json' with { type: 'json' };
+export const sessionServer = fileURLToPath(new URL('./session-server.mjs', import.meta.url));
 export const test = base.extend<{ desktop: void }>({
   desktop: [
     async ({ page }, use) => {
+      await page.addInitScript({ path: sessionServer });
       await page.addInitScript(permissions => {
         const state = window as unknown as Record<string, unknown>;
         const calls: { command: string; args: Record<string, unknown> }[] = [];
         let callbackId = 0;
         const callbacks = new Map<number, (event: unknown) => unknown>();
         const listeners = new Map<string, number>();
-        const terminals = new Map<string, { onmessage: (event: unknown) => void }>();
-        state.__emdeckEmitTerminal = (id: string, event: unknown) =>
-          terminals.get(id)?.onmessage(event);
         state.isTauri = true;
         state.__emdeckCalls = calls;
         state.__emdeckStartup = JSON.parse(
@@ -169,14 +169,20 @@ export const test = base.extend<{ desktop: void }>({
                 const key = `${args.staged ? 'staged' : 'working'}:${args.path}`;
                 return (state.__emdeckDiffs as Record<string, string> | undefined)?.[key] ?? '';
               }
-              case 'terminal_spawn':
-              case 'terminal_connect_remote': {
-                if (command === 'terminal_connect_remote' && state.__emdeckRemoteError)
-                  throw state.__emdeckRemoteError;
-                const id = `pty-${terminals.size}`;
-                terminals.set(id, args.onEvent as { onmessage: (event: unknown) => void });
-                return id;
-              }
+              case 'session_connect':
+                if (state.__emdeckConnectError) throw state.__emdeckConnectError;
+                return 'session-0';
+              case 'session_disconnect':
+                return null;
+              case 'session_request':
+                return (
+                  state.__emdeckSession as {
+                    request: (action: unknown) => Promise<unknown>;
+                  }
+                ).request(args.action);
+              case 'remote_session_args':
+                if (state.__emdeckRemoteError) throw state.__emdeckRemoteError;
+                return ['/usr/bin/ssh', '-tt', '--', 'fixture-host'];
               case 'plugin:event|listen':
                 listeners.set(String(args.event), Number(args.handler));
                 if (args.event === 'tauri://close-requested') state.__emdeckCloseReady = true;

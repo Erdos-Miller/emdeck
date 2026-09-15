@@ -3,6 +3,31 @@
 Versions through 0.1.3 were released as Relay; versions 0.1.4–0.1.14 were
 released as Veldri. Historical artifact names below are unchanged.
 
+## Unreleased — every terminal on the session server
+
+Validated on 2026-09-16 on Linux, on top of the session-server runtime:
+
+- The app's second PTY stack was removed. `emdeck-session` now owns every
+  terminal, plus Claude usage reports, queued agent commands and pasted
+  attachments. The protocol moved to version 2 and keeps its exact-match check.
+- Native suite: 101 tests across the workspace, including server tests for a
+  pane child reporting Claude usage through the CLI, per-cursor agent command
+  delivery, chunked attachments that leave with their pane, and a direct
+  argument list that no local shell parses. The six-pane soak moved to
+  `runtime/tests/soak.rs` and remains opt-in, as does one provider test.
+- Browser suite: 160 workflows against a fixed build, driven by an in-page
+  session-server stand-in instead of the removed terminal IPC commands. This
+  includes the background-layout, session-sidebar and workspace-sidebar
+  workflows, whose fixture now serves only background machines; the window's own
+  runtime connection reaches the stand-in. 204 unit and 16 integration tests
+  pass; lint, types, formatting, architecture and code-size checks pass. Rust
+  formatting and Clippy pass across the workspace.
+- Not exercised here: Windows and macOS builds, a real Claude status line, a
+  signed-in Codex CLI, and authenticated SSH hosts. The Windows PATH-inheritance
+  regression was ported to the session server but has only been run on Linux
+  targets, where it is skipped. A desktop run against real agents is still
+  required before claiming parity.
+
 ## Unreleased — terminal scrollback during resizing
 
 Validated on Windows x64 on 2026-09-15. `bun run verify` passed with 197 unit, 3

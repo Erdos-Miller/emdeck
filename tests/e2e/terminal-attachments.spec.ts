@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures/desktop';
 import type { Page } from './fixtures/desktop';
+import { actions, emit, exitPane } from './fixtures/session';
 
 const calls = (page: Page, command: string) =>
   page.evaluate(
@@ -9,34 +10,13 @@ const calls = (page: Page, command: string) =>
       ).__emdeckCalls.filter(call => call.command === command),
     command
   );
+const inputs = async (page: Page) => (await actions(page, 'pane.input')).map(params => params.text);
+const uploads = (page: Page) => actions(page, 'pane.attachment');
 
 test.beforeEach(async ({ page }) => {
   await page.evaluate(() => {
-    const state = window as unknown as {
-      __TAURI_INTERNALS__: {
-        invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-      };
-      __attachmentError?: boolean;
-      __releaseAttachment?: () => void;
-      __delayAttachment?: boolean;
-      __attachmentReturned?: number;
-    };
-    const original = state.__TAURI_INTERNALS__.invoke;
-    state.__TAURI_INTERNALS__.invoke = async (command, args = {}) => {
-      const result = await original(command, args);
-      if (command === 'terminal_attachment') {
-        if (state.__delayAttachment)
-          await new Promise<void>(resolve => {
-            state.__releaseAttachment = resolve;
-          });
-        if (state.__attachmentError) throw 'Could not store this attachment';
-        state.__attachmentReturned = (state.__attachmentReturned ?? 0) + 1;
-        return `'C:/temp/emdeck-attachments/${args.name}' `;
-      }
-      if (command === 'terminal_path_input')
-        return (args.paths as string[]).map(path => `'${path}' `).join('');
-      return result;
-    };
+    (window as unknown as Record<string, unknown>).__emdeckPathInput =
+      "'C:/fixture/a screenshot.png' 'C:/fixture/notes.txt' ";
   });
   await page.getByRole('button', { name: 'New terminal', exact: true }).click();
   await page.getByRole('button', { name: 'Claude Claude Code', exact: true }).click();
@@ -65,33 +45,26 @@ const pasteFile = async (page: Page, type: 'paste' | 'drop' = 'paste') => {
 test('pasted images and browser file drops become paths, with bracketed paste and no submit', async ({
   page,
 }) => {
-  await page.evaluate(() =>
-    (
-      window as unknown as { __emdeckEmitTerminal: (id: string, event: unknown) => void }
-    ).__emdeckEmitTerminal('pty-0', {
-      type: 'data',
-      data: Array.from(new TextEncoder().encode('\x1b[?2004h')),
-    })
-  );
+  await emit(page, 'pane-0', '\x1b[?2004h');
   await pasteFile(page);
   await expect
-    .poll(async () => (await calls(page, 'terminal_write')).map(call => call.args.data))
+    .poll(() => inputs(page))
     .toEqual(["\x1b[200~'C:/temp/emdeck-attachments/screenshot.png' \x1b[201~"]);
-  expect((await calls(page, 'terminal_attachment'))[0].args.data).toEqual([
-    137, 80, 78, 71, 13, 10, 26, 10,
-  ]);
+  const upload = (await uploads(page))[0];
+  expect(upload).toMatchObject({ id: 'pane-0', name: 'screenshot.png', offset: 0, total: 8 });
+  expect(await page.evaluate(data => atob(data).length, upload.data as string)).toBe(8);
   await pasteFile(page, 'drop');
-  await expect.poll(async () => (await calls(page, 'terminal_attachment')).length).toBe(2);
-  await expect.poll(async () => (await calls(page, 'terminal_write')).length).toBe(2);
+  await expect.poll(async () => (await uploads(page)).length).toBe(2);
+  await expect.poll(async () => (await inputs(page)).length).toBe(2);
   await page.locator('.xterm-helper-textarea').evaluate(element => {
     const clipboardData = new DataTransfer();
     clipboardData.setData('text/plain', 'plain pasted text');
     element.dispatchEvent(new ClipboardEvent('paste', { clipboardData, bubbles: true }));
   });
   await expect
-    .poll(async () => (await calls(page, 'terminal_write')).at(-1)?.args.data)
+    .poll(async () => (await inputs(page)).at(-1))
     .toBe('\x1b[200~plain pasted text\x1b[201~');
-  expect(await calls(page, 'terminal_spawn')).toHaveLength(1);
+  expect(await actions(page, 'pane.create')).toHaveLength(1);
 });
 
 test('native file drops target the pane under the pointer, including scaled displays', async ({
@@ -121,58 +94,58 @@ test('native file drops target the pane under the pointer, including scaled disp
     { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
   );
   await expect
-    .poll(async () => (await calls(page, 'terminal_path_input')).map(call => call.args))
-    .toEqual([{ id: 'pty-0', paths: ['C:/fixture/a screenshot.png', 'C:/fixture/notes.txt'] }]);
+    .poll(async () => (await actions(page, 'pane.paths')).map(params => [params.id, params.paths]))
+    .toEqual([['pane-0', ['C:/fixture/a screenshot.png', 'C:/fixture/notes.txt']]]);
   await expect
-    .poll(async () => (await calls(page, 'terminal_write')).map(call => call.args))
-    .toEqual([{ id: 'pty-0', data: "'C:/fixture/a screenshot.png' 'C:/fixture/notes.txt' " }]);
-  expect(await calls(page, 'terminal_attachment')).toHaveLength(0);
+    .poll(() => inputs(page))
+    .toEqual(["'C:/fixture/a screenshot.png' 'C:/fixture/notes.txt' "]);
+  expect(await uploads(page)).toHaveLength(0);
 });
 
 test('a failed attachment reports the error and leaves the terminal usable', async ({ page }) => {
   await page.evaluate(() => {
-    (window as unknown as { __attachmentError: boolean }).__attachmentError = true;
+    (window as unknown as Record<string, unknown>).__emdeckAttachmentError =
+      'Could not store this attachment';
   });
   await pasteFile(page);
-  await expect(page.getByText('Could not store this attachment', { exact: true })).toBeVisible();
-  expect(await calls(page, 'terminal_write')).toHaveLength(0);
+  await expect(page.getByText('Could not store this attachment')).toBeVisible();
+  expect(await inputs(page)).toHaveLength(0);
   await page.evaluate(() => {
-    (window as unknown as { __attachmentError: boolean }).__attachmentError = false;
+    (window as unknown as Record<string, unknown>).__emdeckAttachmentError = undefined;
   });
   await pasteFile(page);
-  await expect.poll(async () => (await calls(page, 'terminal_write')).length).toBe(1);
+  await expect.poll(async () => (await inputs(page)).length).toBe(1);
 });
 
 test('an upload finishing after a restart cannot insert into the replacement terminal', async ({
   page,
 }) => {
   await page.evaluate(() => {
-    (window as unknown as { __delayAttachment: boolean }).__delayAttachment = true;
+    (window as unknown as Record<string, unknown>).__emdeckAttachmentDelay = true;
   });
   await pasteFile(page);
   await expect
     .poll(() =>
       page.evaluate(
-        () => typeof (window as unknown as { __releaseAttachment?: () => void }).__releaseAttachment
+        () =>
+          typeof (window as unknown as { __emdeckReleaseAttachment?: () => void })
+            .__emdeckReleaseAttachment
       )
     )
     .toBe('function');
-  await page.evaluate(() =>
-    (
-      window as unknown as { __emdeckEmitTerminal: (id: string, event: unknown) => void }
-    ).__emdeckEmitTerminal('pty-0', { type: 'exit', code: 0 })
-  );
+  await exitPane(page, 'pane-0', 0);
   await page.getByTitle('Restart terminal', { exact: true }).click();
-  await expect.poll(async () => (await calls(page, 'terminal_spawn')).length).toBe(2);
-  await page.evaluate(() =>
-    (window as unknown as { __releaseAttachment: () => void }).__releaseAttachment()
-  );
+  await expect.poll(async () => (await actions(page, 'pane.restart')).length).toBe(1);
+  await page.evaluate(() => {
+    (window as unknown as Record<string, unknown>).__emdeckAttachmentDelay = false;
+    (window as unknown as { __emdeckReleaseAttachment: () => void }).__emdeckReleaseAttachment();
+  });
   await expect
     .poll(() =>
       page.evaluate(
-        () => (window as unknown as { __attachmentReturned: number }).__attachmentReturned
+        () => (window as unknown as { __emdeckAttachmentCount?: number }).__emdeckAttachmentCount
       )
     )
     .toBe(1);
-  expect(await calls(page, 'terminal_write')).toHaveLength(0);
+  expect(await inputs(page)).toHaveLength(0);
 });

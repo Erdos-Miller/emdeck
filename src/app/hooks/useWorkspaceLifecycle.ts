@@ -12,7 +12,7 @@ import type { useWorkspaceState } from './useWorkspaceState';
 type Dependencies = Pick<ReturnType<typeof useTabActions>, 'saveCurrentFile' | 'closeActiveTab'> &
   Pick<ReturnType<typeof useProjectActions>, 'openProject'> &
   Pick<ReturnType<typeof useWorkspaceRefresh>, 'refresh'> &
-  Pick<ReturnType<typeof useTerminalActions>, 'addPane'> &
+  Pick<ReturnType<typeof useTerminalActions>, 'addPane' | 'detachWindowPanes'> &
   Pick<ReturnType<typeof useRunActions>, 'runSelected'> &
   Pick<
     ReturnType<typeof useWorkspaceState>,
@@ -37,6 +37,7 @@ export function useWorkspaceLifecycle({
   closeActiveTab,
   refresh,
   addPane,
+  detachWindowPanes,
   runSelected,
   toggleSidebar,
   active,
@@ -59,6 +60,7 @@ export function useWorkspaceLifecycle({
     closeActiveTab,
     refresh,
     addPane,
+    detachWindowPanes,
     runSelected,
     toggleSidebar,
     active,
@@ -131,7 +133,7 @@ export function useWorkspaceLifecycle({
                   latest.current.panes.length > 0) &&
                 !(await confirm(
                   'Close this Emdeck window?',
-                  'Unsaved file and merge edits in this window will be discarded. Local terminals will end and remote connections will disconnect. Other Emdeck windows will stay open.',
+                  'Unsaved file and merge edits in this window will be discarded. Terminals keep running on the session server and reattach when you reopen this project. Other Emdeck windows will stay open.',
                   'Close window',
                   true
                 ))
@@ -140,6 +142,7 @@ export function useWorkspaceLifecycle({
               // close() would emit another close request and re-enter this handler.
               if (!disposed) {
                 rememberProject(latest.current.project);
+                await handlers.current.detachWindowPanes();
                 await win.destroy();
               }
             } catch (error) {

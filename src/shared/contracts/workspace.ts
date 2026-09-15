@@ -115,6 +115,7 @@ export interface RunConfig {
 export type PaneState = 'starting' | 'running' | 'output' | 'exited' | 'error' | 'preview';
 export interface Pane {
   id: string;
+  generation: string;
   name: string;
   title?: string;
   customName?: string;
@@ -124,7 +125,6 @@ export interface Pane {
   color: string;
   startedAt?: number;
   endedAt?: number;
-  restart?: number;
   remote?: SshProfile;
 }
 export type Layout = 'columns' | 'rows' | 'grid';
@@ -143,23 +143,6 @@ export interface Settings {
   reopenLastProject: boolean;
   terminalPlacement: 'workspace' | 'editor';
 }
-export type TerminalEvent =
-  | {
-      type: 'data';
-      data: number[];
-    }
-  | {
-      type: 'exit';
-      code: number | null;
-    }
-  | {
-      type: 'usage';
-      usage: AgentUsage;
-    }
-  | {
-      type: 'command';
-      command: AgentCommand;
-    };
 export type AgentCommand =
   | {
       op: 'showDiff';
