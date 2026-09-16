@@ -6,13 +6,13 @@ import type {
   Entry,
   FileData,
   GitSnapshot,
-  Project,
   Worktree,
 } from './workspace';
 import type { SshTarget } from './remote';
 import type { MachineTarget, SessionAction } from './sessions';
 import type { ConflictResolution, GitConflict } from './gitConflicts';
 import type { DiscardPlan, DiscardRequest } from './gitDiscard';
+import type { OpenProjectResult, OpenWindowResult } from './projects';
 
 type Command<Args, Result> = { args: Args; result: Result };
 type FileLocation = { root: string; path: string };
@@ -25,8 +25,9 @@ export interface DesktopCommands {
   session_connect: Command<{ target: MachineTarget }, string>;
   session_request: Command<{ connection: string; action: SessionAction }, unknown>;
   session_disconnect: Command<{ connection: string }, void>;
-  open_project: Command<{ path: string }, Project>;
-  open_project_window: Command<{ path: string }, string>;
+  open_project: Command<{ path: string }, OpenProjectResult>;
+  open_project_window: Command<{ path: string }, OpenWindowResult>;
+  focus_project_window: Command<{ path: string }, string | null>;
   startup_project: Command<Record<string, never>, string | null>;
   read_directory: Command<FileLocation, Entry[]>;
   read_file: Command<FileLocation, FileData>;

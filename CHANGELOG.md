@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Arrange background terminals in rows, columns, grids or custom splits, with
+  drag-and-drop placement, resizable dividers and keyboard controls. Keep
+  running processes and input leases intact across layout changes.
+- Use local and remote background sessions alongside ordinary terminals in
+  Workspaces, with machine-qualified discovery, live status and explicit attach
+  controls. Remember views without automatically launching agents.
+- Collapse background machine settings or reduce the Workspaces sidebar to
+  compact job tiles while retaining status colors, attention indicators and
+  keyboard access. Remember each sidebar's visibility preference.
+- Open each project folder in one window. Reopening an owned folder, including
+  through a second app launch, restores and focuses its existing window while
+  preserving unsaved edits and terminals.
+
 - Stabilize workspace status color tests by waiting for terminal focus after
   selecting a session, then checking sidebar focus through keyboard navigation.
 - Clear Claude's Working state when its foreground turn completes, including

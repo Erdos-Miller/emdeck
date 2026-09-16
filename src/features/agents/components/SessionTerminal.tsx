@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { sessionCall } from '../../../platform/desktop/sessions';
 import type { SessionPane, SessionRead } from '../../../shared/contracts/sessions';
 import type { Settings } from '../../../shared/contracts/workspace';
@@ -18,6 +19,9 @@ interface Props {
   onDetach: () => void;
   onStop: () => void;
   onMaximize: () => void;
+  arrangeControl?: ReactNode;
+  onFocus?: () => void;
+  focusRequest?: number;
 }
 export default function SessionTerminal({
   connection,
@@ -26,6 +30,9 @@ export default function SessionTerminal({
   onDetach,
   onStop,
   onMaximize,
+  arrangeControl,
+  onFocus,
+  focusRequest = 0,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -164,14 +171,19 @@ export default function SessionTerminal({
       resizeCurrent.current?.();
     }
   }, [settings.theme, settings.terminalFontSize, settings.scrollback]);
+  useEffect(() => {
+    if (focusRequest) terminal.current?.focus();
+  }, [focusRequest]);
   const handleTakeover = () => setTakeover(value => value + 1);
   const handleDismissAttachment = () => setAttachmentError('');
   return (
     <section
       className='terminal-pane session-terminal'
+      onFocusCapture={onFocus}
       aria-label={`${sessionName(pane)} persistent terminal`}
     >
       <header className='pane-header'>
+        {arrangeControl}
         <strong title={sessionName(pane)}>{sessionName(pane)}</strong>
         <span
           className={`session-state ${pane.agent.state}`}
