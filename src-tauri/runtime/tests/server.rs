@@ -653,6 +653,7 @@ fn attachments_stage_in_chunks_and_leave_with_the_pane() {
     fixture.call(Action::PaneStop {
         id: pane.id.clone(),
     });
+    until(|| !fixture.read(&pane.id).pane.running);
     fixture.call(Action::PaneRemove { id: pane.id });
     assert!(!Path::new(&path).exists());
 }
