@@ -38,10 +38,9 @@ fn desktop_reporter_keeps_redirected_stdin_and_stdout_without_a_console() {
         .prefix("emdeck-agent-launch-test-")
         .tempdir()
         .unwrap();
-    let target = directory.path().join("usage.json");
     let mut child = Command::new(env!("CARGO_BIN_EXE_emdeck-ide"))
-        .arg("--agent-report")
-        .arg(&target)
+        .args(["session", "report-usage"])
+        .env("EMDECK_SESSION_HOME", directory.path())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -64,8 +63,8 @@ fn desktop_reporter_keeps_redirected_stdin_and_stdout_without_a_console() {
     let output = child.wait_with_output().unwrap();
     input_result.unwrap();
     assert!(output.status.success(), "{:?}", output);
-    assert!(String::from_utf8_lossy(&output.stdout).contains("25% context"));
-    let report: serde_json::Value = serde_json::from_reader(File::open(target).unwrap()).unwrap();
-    assert_eq!(report["model"], "Claude café");
-    assert_eq!(report["contextPercent"], 25.0);
+    // No pane or server backs this run, so only the status line proves the pipes survived.
+    let line = String::from_utf8_lossy(&output.stdout);
+    assert!(line.contains("Claude café"), "{line}");
+    assert!(line.contains("25% context"), "{line}");
 }
