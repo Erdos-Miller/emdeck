@@ -130,6 +130,14 @@ Appearance updates reconfigure the existing terminal. Hidden and maximized panes
 remain mounted. CodeMirror samples a document on tab switches and separately
 applies content/theme updates, preserving per-file undo history.
 
+The shared terminal fitter preserves either output following or a marker at the
+historical line being read. Markers track reflow and trimming through rapid
+resizes and are released after restoration, cancellation or disposal.
+Restoration waits for xterm's viewport synchronization and never carries a
+position into a different buffer. Both terminal views cancel pending restoration
+on wheel, pointer, keyboard and touch interaction so user input takes
+precedence.
+
 Background pane layout belongs to the agents feature. Pure tree and geometry
 services handle presets, docking, swapping, minimum sizes and split ratios; the
 view persists a validated layout under `relay:session-layout`. A flat set of

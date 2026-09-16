@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep the historical terminal line being read visible when panes resize, while
+  continuing to follow output at the bottom. User scrolling takes precedence
+  over pending layout restoration in ordinary and background terminals.
 - Arrange background terminals in rows, columns, grids or custom splits, with
   drag-and-drop placement, resizable dividers and keyboard controls. Keep
   running processes and input leases intact across layout changes.

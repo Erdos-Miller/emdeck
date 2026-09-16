@@ -181,9 +181,11 @@ test('dividers resize by dragging and keyboard, preserve input and scrollback, a
   await expect
     .poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight))
     .toBeGreaterThan(100);
-  await viewport.evaluate(el => {
-    el.scrollTop = 60;
-  });
+  const firstLine = terminal.locator('.xterm-rows > div').first();
+  await expect(terminal.locator('.xterm-rows')).toContainText('READY>');
+  await terminal.locator('.xterm-screen').hover();
+  await page.mouse.wheel(0, -100000);
+  await expect(firstLine).toHaveText('local output 0');
   const divider = page
     .getByRole('separator', { name: 'Resize background columns', exact: true })
     .first();
@@ -198,7 +200,7 @@ test('dividers resize by dragging and keyboard, preserve input and scrollback, a
   const dragged = (await terminal.boundingBox())!.width;
   await page.keyboard.press('ArrowLeft');
   await expect.poll(async () => (await terminal.boundingBox())!.width).toBeLessThan(dragged);
-  await expect.poll(() => viewport.evaluate(el => el.scrollTop)).toBeLessThan(200);
+  await expect(firstLine).toHaveText('local output 0');
   await terminal.locator('.xterm-helper-textarea').focus();
   await page.keyboard.type('still attached');
   await expect
@@ -227,6 +229,43 @@ test('dividers resize by dragging and keyboard, preserve input and scrollback, a
   await connectBackgroundLayout(page);
   await expect(page.locator('.session-terminal:visible')).toHaveCount(4);
   expect(await page.evaluate(() => localStorage.getItem('relay:session-layout'))).toBe(saved);
+});
+
+test('row resizing keeps the historical line being read and still follows output at the bottom', async ({
+  page,
+}) => {
+  await page
+    .getByRole('toolbar', { name: 'Background terminal layout' })
+    .getByRole('button', { name: 'Grid', exact: true })
+    .click();
+  const terminal = backgroundPane(page, 'local/0');
+  const firstLine = terminal.locator('.xterm-rows > div').first();
+  await expect(terminal.locator('.xterm-rows')).toContainText('READY>');
+  await terminal.locator('.xterm-screen').hover();
+  await page.mouse.wheel(0, -100000);
+  await expect(firstLine).toHaveText('local output 0');
+  const rows = page.getByRole('separator', { name: 'Resize background rows', exact: true });
+  const before = (await terminal.boundingBox())!.height;
+  const renderedRows = terminal.locator('.xterm-rows > div');
+  const rowCount = await renderedRows.count();
+  await rows.focus();
+  await page.keyboard.press('Shift+ArrowUp');
+  await expect.poll(async () => (await terminal.boundingBox())!.height).toBeLessThan(before - 40);
+  await expect.poll(() => renderedRows.count()).toBeLessThan(rowCount);
+  await expect(firstLine).toHaveText('local output 0');
+  await page.keyboard.press('Shift+ArrowDown');
+  await expect.poll(async () => (await terminal.boundingBox())!.height).toBeGreaterThan(before - 2);
+  await expect(renderedRows).toHaveCount(rowCount);
+  await expect(firstLine).toHaveText('local output 0');
+  await terminal.locator('.xterm-screen').hover();
+  await page.mouse.wheel(0, 100000);
+  await expect(terminal.locator('.xterm-rows')).toContainText('READY>');
+  await rows.focus();
+  await page.keyboard.press('Shift+ArrowUp');
+  await expect.poll(async () => (await terminal.boundingBox())!.height).toBeLessThan(before - 40);
+  await expect.poll(() => renderedRows.count()).toBeLessThan(rowCount);
+  await expect(terminal.locator('.xterm-rows')).toContainText('READY>');
+  await preserved(page);
 });
 
 test('keyboard positioning and small windows remain usable; detach closes only its view', async ({

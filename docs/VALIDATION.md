@@ -3,6 +3,23 @@
 Versions through 0.1.3 were released as Relay; versions 0.1.4–0.1.14 were
 released as Veldri. Historical artifact names below are unchanged.
 
+## Unreleased — terminal scrollback during resizing
+
+Validated on Windows x64 on 2026-09-15. `bun run verify` passed with 197 unit, 3
+integration, 88 native and 155 browser tests; three existing native tests remain
+opt-in. Rust formatting, Clippy and source/history secret scans passed. React
+Doctor retained its reviewed findings without new diagnostics.
+
+The new row-resize regression failed against the previous build: the first
+visible historical line changed from output 0 to output 6. It passes with line
+anchoring, including shrinking/growing and following output at the bottom. Both
+resize regressions passed five consecutive runs against fixed assets, followed
+by the full suite. The original CI test now uses a real wheel gesture and waits
+for rendered history instead of racing a raw `scrollTop` assignment against
+xterm's asynchronous resize. Unit tests cover reflow, rapid fits, buffer
+changes, trimmed markers and cancellation/disposal. No user IDE session was
+restarted; macOS/Linux execution of this follow-up remains for CI.
+
 ## Unreleased — compact Workspaces sidebar
 
 Validated on Windows x64 on 2026-09-15. `bun run verify` passed with 193 unit, 3

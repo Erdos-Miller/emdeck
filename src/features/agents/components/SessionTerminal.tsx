@@ -66,6 +66,11 @@ export default function SessionTerminal({
       request: callback => requestAnimationFrame(callback),
       cancel: id => cancelAnimationFrame(id),
     });
+    const element = host.current;
+    element.addEventListener('wheel', fitter.cancel, { capture: true, passive: true });
+    element.addEventListener('pointerdown', fitter.cancel, true);
+    element.addEventListener('keydown', fitter.cancel, true);
+    element.addEventListener('touchstart', fitter.cancel, { capture: true, passive: true });
     const report = (error: unknown) => {
       if (!disposed) {
         setError(String(error));
@@ -152,6 +157,10 @@ export default function SessionTerminal({
       observer.disconnect();
       input.dispose();
       detachAttachments();
+      element.removeEventListener('wheel', fitter.cancel, true);
+      element.removeEventListener('pointerdown', fitter.cancel, true);
+      element.removeEventListener('keydown', fitter.cancel, true);
+      element.removeEventListener('touchstart', fitter.cancel, true);
       fitter.dispose();
       term.dispose();
       terminal.current = null;

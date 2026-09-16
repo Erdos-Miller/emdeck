@@ -1,5 +1,14 @@
 # React audit — 0.1.19
 
+## Unreleased — terminal scrollback during resizing
+
+React Doctor 0.9.13 retains the four reviewed Worktrees errors and 70 advisory
+warnings. No new diagnostics were introduced. Existing TerminalPane complexity
+and size advice remains below the repository's component budget. Scrollback
+restoration stays in the pure fitter service; terminal effects only bind and
+clean up interaction listeners. The change does not alter effect dependencies,
+terminal identity or attachment lifetime. No diagnostics were suppressed.
+
 ## Unreleased — compact Workspaces sidebar
 
 React Doctor 0.9.13 retains the four reviewed Worktrees errors and reports 70
