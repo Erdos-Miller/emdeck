@@ -171,34 +171,35 @@ pub fn shell_quote(value: &str, powershell: bool) -> String {
     }
 }
 
+const ENCODED_POWERSHELL: &str =
+    "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ";
+
+fn encoded_powershell(invocation: &str) -> String {
+    use base64::Engine;
+    let script = format!(
+        "$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); [Console]::In.ReadToEnd() | & {invocation}"
+    );
+    let bytes: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    format!(
+        "{ENCODED_POWERSHELL}{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    )
+}
+
 fn reporter_command(exe: &Path, prefix: &[String]) -> String {
     let mut words = vec![exe.to_string_lossy().into_owned()];
     words.extend(prefix.iter().cloned());
     words.push("report-usage".into());
-    #[cfg(windows)]
-    {
-        use base64::Engine;
-        let invocation = words
-            .iter()
-            .map(|word| shell_quote(word, true))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let script = format!(
-            "$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); [Console]::In.ReadToEnd() | & {invocation}"
-        );
-        let bytes: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
-        format!(
-            "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand {}",
-            base64::engine::general_purpose::STANDARD.encode(bytes)
-        )
-    }
-    #[cfg(not(windows))]
-    {
-        words
-            .iter()
-            .map(|word| shell_quote(word, false))
-            .collect::<Vec<_>>()
-            .join(" ")
+    let powershell = cfg!(windows);
+    let invocation = words
+        .iter()
+        .map(|word| shell_quote(word, powershell))
+        .collect::<Vec<_>>()
+        .join(" ");
+    if powershell {
+        encoded_powershell(&invocation)
+    } else {
+        invocation
     }
 }
 
@@ -257,11 +258,37 @@ mod tests {
         assert!(usage.updated_at > 0);
     }
 
+    // Windows hands the reporter to PowerShell as a UTF-16 payload; assert on what it will run.
+    fn reported(command: &str) -> String {
+        let Some(encoded) = command.strip_prefix(ENCODED_POWERSHELL) else {
+            return command.to_owned();
+        };
+        use base64::Engine;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .expect("a base64 payload");
+        let units: Vec<u16> = bytes
+            .chunks_exact(2)
+            .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+            .collect();
+        String::from_utf16(&units).expect("a UTF-16 script")
+    }
+
+    #[test]
+    fn an_encoded_reporter_command_still_names_the_cli() {
+        let invocation = "'C:\\Program Files\\emdeck.exe' session report-usage";
+        let command = encoded_powershell(invocation);
+        assert!(command.starts_with(ENCODED_POWERSHELL));
+        assert!(reported(&command).ends_with(invocation));
+    }
+
     #[test]
     fn status_line_settings_point_at_the_reporting_cli() {
         let line = StatusLine::new(Path::new("/opt/emdeck-session"), &[]).unwrap();
-        let settings = std::fs::read_to_string(line.settings()).unwrap();
-        assert!(settings.contains("report-usage"));
+        let settings: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(line.settings()).unwrap()).unwrap();
+        let command = settings["statusLine"]["command"].as_str().unwrap();
+        assert!(reported(command).contains("report-usage"));
         assert!(line
             .launch("/bin/bash")
             .unwrap()
@@ -272,7 +299,8 @@ mod tests {
     #[test]
     fn embedded_hosts_keep_their_session_argument() {
         let command = reporter_command(Path::new("/opt/emdeck-ide"), &["session".to_owned()]);
-        assert!(command.contains("session"));
-        assert!(command.contains("report-usage"));
+        let invocation = reported(&command);
+        assert!(invocation.contains("session"));
+        assert!(invocation.contains("report-usage"));
     }
 }
