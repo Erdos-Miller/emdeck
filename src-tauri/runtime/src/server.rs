@@ -80,7 +80,7 @@ fn connection(
     };
     send(&mut stream, &response, MAX_RESPONSE)
 }
-pub fn run(home: &Path) -> Result<()> {
+pub fn run(home: &Path, embedded: bool) -> Result<()> {
     let _lock = storage::prepare(home)?;
     let listener = TcpListener::bind(("127.0.0.1", 0)).map_err(error)?;
     listener.set_nonblocking(true).map_err(error)?;
@@ -94,7 +94,7 @@ pub fn run(home: &Path) -> Result<()> {
         server_id: uuid::Uuid::new_v4().to_string(),
         pid: std::process::id(),
     };
-    let engine = Engine::load(home, endpoint.server_id.clone())?;
+    let engine = Engine::load(home, endpoint.server_id.clone(), embedded)?;
     let remote = crate::remote::Host::load(home, endpoint.clone())?;
     storage::write_json(&home.join("endpoint.json"), &endpoint)?;
     engine.restore();

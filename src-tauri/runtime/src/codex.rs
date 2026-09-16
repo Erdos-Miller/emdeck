@@ -1,8 +1,9 @@
-use crate::services::{
-    agent_usage::{now, LimitWindow},
-    workspace::{err, Result},
+use crate::{
+    error,
+    terminal::now,
+    usage::{AccountUsage, LimitWindow},
+    Result,
 };
-use serde::Serialize;
 use serde_json::{json, Value};
 use std::{
     io::{BufRead, BufReader, Read, Write},
@@ -12,18 +13,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AccountUsage {
-    pub source: String,
-    pub updated_at: u64,
-    pub limits: Vec<LimitWindow>,
-}
 #[derive(Default)]
 pub struct UsageCache(Mutex<Option<(Instant, AccountUsage)>>);
 impl UsageCache {
     pub fn read(&self) -> Result<AccountUsage> {
-        let mut cache = self.0.lock().map_err(err)?;
+        let mut cache = self.0.lock().map_err(error)?;
         if let Some((at, value)) = cache.as_ref() {
             if at.elapsed() < Duration::from_secs(30) {
                 return Ok(value.clone());
@@ -62,7 +56,7 @@ fn binary() -> Result<PathBuf> {
         let direct = dir.join(name);
         if direct.is_file() {
             // npm's Unix shim is a JS script; use its vendor binary below.
-            let resolved = direct.canonicalize().map_err(err)?;
+            let resolved = direct.canonicalize().map_err(error)?;
             if !resolved
                 .extension()
                 .is_some_and(|e| e == "js" || e == "mjs")
@@ -82,7 +76,7 @@ fn binary() -> Result<PathBuf> {
                 for folder in ["bin", "codex"] {
                     let candidate = vendor.join(triple).join(folder).join(name);
                     if candidate.is_file() {
-                        return candidate.canonicalize().map_err(err);
+                        return candidate.canonicalize().map_err(error);
                     }
                 }
             }
@@ -138,7 +132,7 @@ fn read_limits() -> Result<AccountUsage> {
     let temp = tempfile::Builder::new()
         .prefix("emdeck-codex-usage-")
         .tempdir()
-        .map_err(err)?;
+        .map_err(error)?;
     let mut command = Command::new(binary()?);
     command
         .arg("app-server")
@@ -151,7 +145,7 @@ fn read_limits() -> Result<AccountUsage> {
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000);
     }
-    let mut child = command.spawn().map_err(err)?;
+    let mut child = command.spawn().map_err(error)?;
     let mut input = child.stdin.take().ok_or("Codex stdin unavailable")?;
     let output = child.stdout.take().ok_or("Codex stdout unavailable")?;
     let (tx, rx) = mpsc::sync_channel(16);
@@ -176,8 +170,8 @@ fn read_limits() -> Result<AccountUsage> {
         }
     });
     let result = (|| {
-        writeln!(input, "{}", json!({"method":"initialize", "id":0, "params":{"clientInfo":{"name":"emdeck_usage", "title":"Emdeck usage", "version":env!("CARGO_PKG_VERSION")}}})).map_err(err)?;
-        input.flush().map_err(err)?;
+        writeln!(input, "{}", json!({"method":"initialize", "id":0, "params":{"clientInfo":{"name":"emdeck_usage", "title":"Emdeck usage", "version":env!("CARGO_PKG_VERSION")}}})).map_err(error)?;
+        input.flush().map_err(error)?;
         let deadline = Instant::now() + Duration::from_secs(15);
         loop {
             let message = rx.recv_timeout(deadline.saturating_duration_since(Instant::now())).map_err(|_| "Codex usage request timed out. Check that Codex CLI is signed in and try again.")?;
@@ -188,14 +182,15 @@ fn read_limits() -> Result<AccountUsage> {
                     .into());
             }
             if message["id"] == 0 {
-                writeln!(input, "{}", json!({"method":"initialized","params":{}})).map_err(err)?;
+                writeln!(input, "{}", json!({"method":"initialized","params":{}}))
+                    .map_err(error)?;
                 writeln!(
                     input,
                     "{}",
                     json!({"method":"account/rateLimits/read","id":1})
                 )
-                .map_err(err)?;
-                input.flush().map_err(err)?;
+                .map_err(error)?;
+                input.flush().map_err(error)?;
             } else if message["id"] == 1 {
                 return Ok(AccountUsage {
                     source: "Codex CLI account".into(),

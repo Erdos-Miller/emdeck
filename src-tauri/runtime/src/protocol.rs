@@ -1,6 +1,7 @@
+use crate::{command::CommandEntry, usage::Usage};
 use serde::{Deserialize, Serialize};
 
-pub const PROTOCOL: u32 = 1;
+pub const PROTOCOL: u32 = 2;
 pub const MAX_REQUEST: usize = 128 * 1024;
 pub const MAX_RESPONSE: usize = 8 * 1024 * 1024;
 
@@ -35,6 +36,20 @@ pub struct Launch {
     pub command: String,
     #[serde(default)]
     pub resume_on_restart: bool,
+    #[serde(default)]
+    pub usage_reporting: bool,
+    /// A direct argv, for programs that must never pass through a local shell.
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+impl Launch {
+    pub fn line(&self) -> String {
+        if self.args.is_empty() {
+            self.command.clone()
+        } else {
+            self.args.join(" ")
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -52,6 +67,8 @@ pub struct PaneInfo {
     pub cols: u16,
     pub rows: u16,
     pub agent: AgentInfo,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -110,6 +127,23 @@ pub enum Action {
         id: String,
         after: Option<u64>,
         wait_ms: u32,
+        #[serde(default)]
+        commands_after: Option<u64>,
+    },
+    #[serde(rename = "pane.attachment")]
+    Attachment {
+        id: String,
+        client: String,
+        name: String,
+        data: String,
+        offset: u64,
+        total: u64,
+    },
+    #[serde(rename = "pane.paths")]
+    InputPaths {
+        id: String,
+        client: String,
+        paths: Vec<String>,
     },
     #[serde(rename = "pane.input")]
     Input {
@@ -131,6 +165,18 @@ pub enum Action {
         state: AgentState,
         session_id: Option<String>,
     },
+    #[serde(rename = "agent.usage")]
+    UsageReport {
+        id: String,
+        generation: String,
+        usage: Usage,
+    },
+    #[serde(rename = "agent.command")]
+    CommandReport {
+        id: String,
+        generation: String,
+        command: crate::command::AgentCommand,
+    },
     #[serde(rename = "agent.prompt")]
     Prompt {
         id: String,
@@ -144,6 +190,8 @@ pub enum Action {
         states: Vec<AgentState>,
         timeout_ms: u32,
     },
+    #[serde(rename = "account.usage")]
+    AccountUsage { provider: String },
     #[serde(rename = "server.stop")]
     StopServer,
 }
@@ -176,4 +224,48 @@ pub struct ReadResult {
     pub data: String,
     pub text: String,
     pub pane: PaneInfo,
+    pub command_sequence: u64,
+    pub commands: Vec<CommandEntry>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // Every field v2 added is defaulted, so a client that has not cut over still parses.
+    #[test]
+    fn accepts_actions_without_the_fields_v2_added() {
+        let create = serde_json::from_value::<Action>(json!({
+            "method": "pane.create",
+            "params": {
+                "launch": {
+                    "workspaceId": "workspace",
+                    "name": "Claude",
+                    "cwd": "/projects/emdeck",
+                    "shell": "",
+                    "command": "claude"
+                },
+                "cols": 100,
+                "rows": 30
+            }
+        }))
+        .expect("pane.create without usageReporting or args");
+        let Action::PaneCreate { launch, .. } = create else {
+            panic!("pane.create parsed as another action");
+        };
+        assert!(!launch.usage_reporting);
+        assert!(launch.args.is_empty());
+        assert_eq!(launch.line(), "claude");
+
+        let read = serde_json::from_value::<Action>(json!({
+            "method": "pane.read",
+            "params": { "id": "pane", "after": null, "wait_ms": 20000 }
+        }))
+        .expect("pane.read without commandsAfter");
+        let Action::Read { commands_after, .. } = read else {
+            panic!("pane.read parsed as another action");
+        };
+        assert_eq!(commands_after, None);
+    }
 }

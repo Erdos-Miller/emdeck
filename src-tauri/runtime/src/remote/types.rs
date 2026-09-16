@@ -120,7 +120,7 @@ pub(super) enum Payload {
     Call {
         device: String,
         token: String,
-        action: crate::protocol::Action,
+        action: Box<crate::protocol::Action>,
     },
 }
 #[derive(Serialize, Deserialize)]

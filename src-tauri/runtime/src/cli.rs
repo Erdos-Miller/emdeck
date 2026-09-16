@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-const HELP: &str = "Emdeck session server\n\n  emdeck-session start          Start the detached server\n  emdeck-session server         Run the server in the foreground\n  emdeck-session status         List workspaces, panes and agent states\n  emdeck-session stop           Stop the server AND its terminals\n  emdeck-session request JSON   Execute a typed API action\n  emdeck-session rpc            Multiplex JSON requests over stdin/stdout (SSH)\n\nSet EMDECK_SESSION_HOME to isolate storage. Request JSON uses method/params.\nExamples:\n  {\"method\":\"workspace.create\",\"params\":{\"root\":\"/home/me/project\",\"name\":\"Project\"}}\n  {\"method\":\"session.snapshot\",\"params\":{\"after\":null,\"wait_ms\":0}}\nSee docs/PERSISTENT-AGENTS.md for pane and agent automation.\n";
+const HELP: &str = "Emdeck session server\n\n  emdeck-session start          Start the detached server\n  emdeck-session server         Run the server in the foreground\n  emdeck-session status         List workspaces, panes and agent states\n  emdeck-session stop           Stop the server AND its terminals\n  emdeck-session request JSON   Execute a typed API action\n  emdeck-session rpc            Multiplex JSON requests over stdin/stdout (SSH)\n\nInside a pane:\n  emdeck-session report STATE   Report working, blocked, idle, done or stopped\n  emdeck-session command JSON   Ask the desktop to open a file or a diff\n  emdeck-session report-usage   Convert Claude status-line JSON on stdin into usage\n\nSet EMDECK_SESSION_HOME to isolate storage. Request JSON uses method/params.\nExamples:\n  {\"method\":\"workspace.create\",\"params\":{\"root\":\"/home/me/project\",\"name\":\"Project\"}}\n  {\"method\":\"session.snapshot\",\"params\":{\"after\":null,\"wait_ms\":0}}\nSee docs/PERSISTENT-AGENTS.md for pane and agent automation.\n";
 
 pub fn run(args: Vec<String>, embedded: bool) -> Result<()> {
     if args.is_empty() || matches!(args[0].as_str(), "--help" | "help" | "-h") {
@@ -30,7 +30,15 @@ pub fn run(args: Vec<String>, embedded: bool) -> Result<()> {
                 args.get(2).cloned(),
             )
         }
-        "server" => return server::run(&home),
+        "report-usage" => {
+            // Claude has already received the status line; a failed report is not its problem.
+            if let Err(e) = crate::hooks::claude_usage() {
+                eprintln!("Emdeck usage report: {e}");
+            }
+            return Ok(());
+        }
+        "command" => return crate::hooks::command(args.get(1).map(String::as_str)),
+        "server" => return server::run(&home, embedded),
         "start" => client::start(&home, &std::env::current_exe().map_err(error)?, embedded)?,
         "status" => client::call(
             &home,

@@ -98,9 +98,14 @@ pub fn start(home: &Path, executable: &Path, embedded: bool) -> Result<serde_jso
             return Ok(value);
         }
         if let Some(status) = child.try_wait().map_err(error)? {
-            return Err(format!(
-                "Session server exited ({status}). Run `emdeck-session server` for diagnostics."
-            ));
+            // The storage lock is the only thing another live server holds against us.
+            return Err(if storage::endpoint(home).is_ok() {
+                "A session server is already running here and did not accept this version of Emdeck. Run `emdeck-session stop` on that machine, then connect again.".to_owned()
+            } else {
+                format!(
+                    "Session server exited ({status}). Run `emdeck-session server` for diagnostics."
+                )
+            });
         }
         if Instant::now() >= deadline {
             return Err("Session server did not become ready within 8 seconds.".into());

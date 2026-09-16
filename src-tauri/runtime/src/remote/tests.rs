@@ -25,7 +25,7 @@ impl Fixture {
         let home = tempfile::tempdir().unwrap();
         let host_home = tempfile::tempdir().unwrap();
         let path = home.path().to_path_buf();
-        let local = thread::spawn(move || crate::server::run(&path).unwrap());
+        let local = thread::spawn(move || crate::server::run(&path, false).unwrap());
         let deadline = Instant::now() + Duration::from_secs(8);
         while client::call(home.path(), Action::Ping).is_err() {
             assert!(Instant::now() < deadline, "Fixture server did not start");
@@ -85,7 +85,7 @@ impl Fixture {
             Payload::Call {
                 device: grant["device"].as_str().unwrap().into(),
                 token: grant["token"].as_str().unwrap().into(),
-                action,
+                action: Box::new(action),
             },
         )
     }
@@ -299,6 +299,8 @@ fn remote_clients_share_the_persistent_engine_and_have_separate_input_leases() {
                     }
                     .into(),
                     resume_on_restart: false,
+                    usage_reporting: false,
+                    args: Vec::new(),
                 },
                 cols: 80,
                 rows: 24,
@@ -385,6 +387,7 @@ fn remote_clients_share_the_persistent_engine_and_have_separate_input_leases() {
                     id: id.clone(),
                     after: None,
                     wait_ms: 0,
+                    commands_after: None,
                 },
             )
             .unwrap();
@@ -401,7 +404,8 @@ fn remote_clients_share_the_persistent_engine_and_have_separate_input_leases() {
             Action::Read {
                 id,
                 after: None,
-                wait_ms: 0
+                wait_ms: 0,
+                commands_after: None
             }
         )
         .unwrap()["pane"]["running"],

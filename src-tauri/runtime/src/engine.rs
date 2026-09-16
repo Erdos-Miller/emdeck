@@ -1,10 +1,11 @@
 use crate::{
-    agent, error,
+    agent, codex, command, error,
     protocol::*,
     storage::{self, SavedState},
-    terminal::{self, Terminal},
-    Result,
+    terminal::{self, Cli, Terminal},
+    usage, Result,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
@@ -25,13 +26,15 @@ pub struct Engine {
     pub id: String,
     pub stopping: AtomicBool,
     home: PathBuf,
+    cli: Cli,
+    codex: codex::UsageCache,
     state: Mutex<State>,
     changed: Condvar,
     persistence: Mutex<()>,
     mutations: Mutex<()>,
 }
 impl Engine {
-    pub fn load(home: &Path, id: String) -> Result<Arc<Self>> {
+    pub fn load(home: &Path, id: String, embedded: bool) -> Result<Arc<Self>> {
         let saved = storage::load(home)?;
         let mut workspaces = BTreeMap::new();
         let mut panes = BTreeMap::new();
@@ -49,6 +52,7 @@ impl Engine {
             }
             pane.running = false;
             pane.restored = true;
+            pane.usage = None;
             pane.agent.state = AgentState::Stopped;
             pane.agent.reason = "Server restarted; original process is no longer running.".into();
             let size = terminal::size(pane.cols, pane.rows);
@@ -64,6 +68,8 @@ impl Engine {
         Ok(Arc::new(Self {
             id,
             home: home.into(),
+            cli: Cli::new(embedded),
+            codex: codex::UsageCache::default(),
             state: Mutex::new(State {
                 revision: 1,
                 workspaces,
@@ -115,10 +121,12 @@ impl Engine {
             .ok_or("Pane no longer exists.".into())
     }
     fn launch(self: &Arc<Self>, pane: &Arc<Terminal>, resume: bool) -> Result<()> {
-        let command = terminal::command(&pane.info(), &self.home, resume)?;
+        let (command, status_line) =
+            terminal::command(&pane.info(), &self.home, resume, &self.cli)?;
         let weak = Arc::downgrade(self);
         pane.spawn(
             command,
+            status_line,
             Arc::new(move |persist| {
                 if let Some(engine) = weak.upgrade() {
                     if let Err(e) = engine.update(persist) {
@@ -143,7 +151,7 @@ impl Engine {
             id: uuid::Uuid::new_v4().to_string(),
             generation: uuid::Uuid::new_v4().to_string(),
             title: None,
-            agent: agent::initial(&launch.command),
+            agent: agent::initial(&launch.line()),
             launch,
             running: false,
             restored: false,
@@ -151,6 +159,7 @@ impl Engine {
             started_at: terminal::now(),
             cols: size.cols,
             rows: size.rows,
+            usage: None,
         };
         let pane = Arc::new(Terminal::new(info));
         {
@@ -193,8 +202,9 @@ impl Engine {
         info.exit_code = None;
         info.agent.source = "screen".into();
         info.agent.state = AgentState::Unknown;
+        info.usage = None;
         if !resume {
-            info.agent = agent::initial(&info.launch.command);
+            info.agent = agent::initial(&info.launch.line());
         }
         let pane = Arc::new(Terminal::new(info));
         // Reserve the replacement under the map lock so concurrent restarts cannot spawn two occupants.
@@ -353,8 +363,32 @@ impl Engine {
                 self.pane(&id)?.detach(&client)?;
                 Ok(json!(null))
             }
-            Action::Read { id, after, wait_ms } => {
-                Ok(json!(self.pane(&id)?.read(after, wait_ms)?))
+            Action::Read {
+                id,
+                after,
+                wait_ms,
+                commands_after,
+            } => Ok(json!(self.pane(&id)?.read(
+                after,
+                commands_after,
+                wait_ms
+            )?)),
+            Action::InputPaths { id, client, paths } => {
+                Ok(json!({ "input": self.pane(&id)?.paths_input(&client, &paths)? }))
+            }
+            Action::Attachment {
+                id,
+                client,
+                name,
+                data,
+                offset,
+                total,
+            } => {
+                let data = STANDARD.decode(data).map_err(error)?;
+                let input = self
+                    .pane(&id)?
+                    .attachment(&client, &name, &data, offset, total)?;
+                Ok(json!({ "input": input }))
             }
             Action::Input { id, client, text } => {
                 self.pane(&id)?.input(&client, &text)?;
@@ -398,6 +432,38 @@ impl Engine {
                 pane.changed.notify_all();
                 self.update(true)?;
                 Ok(json!(pane.info()))
+            }
+            Action::UsageReport {
+                id,
+                generation,
+                usage,
+            } => {
+                let pane = self.pane(&id)?;
+                let mut live = pane.live.lock().map_err(error)?;
+                if live.info.generation != generation || !live.info.running {
+                    return Err("Agent occupant changed or stopped.".into());
+                }
+                live.info.usage = Some(usage::sanitize(usage));
+                drop(live);
+                pane.changed.notify_all();
+                // Usage is live session state; a restarted server starts without it.
+                self.update(false)?;
+                Ok(json!(null))
+            }
+            Action::CommandReport {
+                id,
+                generation,
+                command,
+            } => {
+                self.pane(&id)?
+                    .queue_command(&generation, command::sanitize(command)?)?;
+                Ok(json!(null))
+            }
+            Action::AccountUsage { provider } => {
+                if provider != "codex" {
+                    return Err("Only Codex account usage is available from this server.".into());
+                }
+                Ok(json!(self.codex.read()?))
             }
             Action::Prompt {
                 id,
@@ -498,6 +564,15 @@ fn validate_launch(launch: &mut Launch, workspace: &WorkspaceInfo) -> Result<()>
         || launch.command.contains('\0')
     {
         return Err("Invalid shell or command.".into());
+    }
+    if launch.args.len() > 64
+        || launch
+            .args
+            .iter()
+            .any(|a| a.len() > 8192 || a.contains('\0'))
+        || launch.args.first().is_some_and(|a| a.trim().is_empty())
+    {
+        return Err("Invalid direct argument list.".into());
     }
     Ok(())
 }

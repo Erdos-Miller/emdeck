@@ -86,7 +86,7 @@ impl Credential {
             Payload::Call {
                 device: self.device.clone(),
                 token: self.token.clone(),
-                action,
+                action: Box::new(action),
             },
         )
     }

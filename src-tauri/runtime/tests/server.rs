@@ -1,4 +1,5 @@
-use emdeck_session::{client, protocol::*, server, ssh, storage};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use emdeck_session::{client, command::AgentCommand, protocol::*, server, ssh, storage};
 use serde_json::json;
 use std::{
     io::BufReader,
@@ -64,6 +65,8 @@ impl Fixture {
                 command: command.into(),
                 shell: String::new(),
                 resume_on_restart: false,
+                usage_reporting: false,
+                args: Vec::new(),
             },
             cols: 80,
             rows: 20,
@@ -75,6 +78,7 @@ impl Fixture {
             id: id.into(),
             after: None,
             wait_ms: 0,
+            commands_after: None,
         }))
         .unwrap()
     }
@@ -446,6 +450,7 @@ fn slow_clients_resynchronize_after_output_ring_eviction() {
         id: pane.id,
         after: Some(0),
         wait_ms: 0,
+        commands_after: None,
     }))
     .unwrap();
     assert!(replay.reset);
@@ -493,11 +498,11 @@ fn detached_launcher_and_multiplexed_cli_survive_client_exit() {
         let mut bridge = command.spawn().unwrap();
         let mut input = bridge.stdin.take().unwrap();
         // A long poll cannot block independent input/metadata actions.
-        writeln!(input, "{}", json!({"version":1,"id":"slow","method":"session.snapshot","params":{"after":1,"wait_ms":1000}})).unwrap();
+        writeln!(input, "{}", json!({"version":PROTOCOL,"id":"slow","method":"session.snapshot","params":{"after":1,"wait_ms":1000}})).unwrap();
         writeln!(
             input,
             "{}",
-            json!({"version":1,"id":"fast","method":"ping"})
+            json!({"version":PROTOCOL,"id":"fast","method":"ping"})
         )
         .unwrap();
         drop(input);
@@ -516,4 +521,213 @@ fn detached_launcher_and_multiplexed_cli_survive_client_exit() {
     client::call(directory.path(), Action::StopServer).unwrap();
     until(|| !directory.path().join("endpoint.json").exists());
     result.unwrap();
+}
+
+#[test]
+fn pane_children_report_claude_usage_through_the_cli() {
+    let fixture = Fixture::new();
+    let cli = env!("CARGO_BIN_EXE_emdeck-session");
+    let payload = r#"{"model":{"display_name":"Opus"},"context_window":{"used_percentage":25},"cost":{"total_cost_usd":1.5},"transcript_path":"/private/transcript"}"#;
+    let command = if cfg!(windows) {
+        format!("'{payload}' | & '{cli}' report-usage; Start-Sleep -Seconds 120")
+    } else {
+        format!("printf '%s' '{payload}' | '{cli}' report-usage; sleep 120")
+    };
+    let pane = fixture.pane(&command);
+    until(|| fixture.read(&pane.id).pane.usage.is_some());
+    let read = fixture.read(&pane.id);
+    let usage = read.pane.usage.unwrap();
+    assert_eq!(usage.model.as_deref(), Some("Opus"));
+    assert_eq!(usage.cost_usd, Some(1.5));
+    assert_eq!(usage.context_percent, Some(25.0));
+    assert!(usage.updated_at > 0);
+    // The status line is printed for Claude, and no transcript path is retained.
+    assert!(read.text.contains("25% context"));
+    assert!(!serde_json::to_string(&usage)
+        .unwrap()
+        .contains("transcript"));
+}
+
+#[test]
+fn agent_commands_are_delivered_once_per_cursor_and_sanitized() {
+    let fixture = Fixture::new();
+    let pane = fixture.pane(waiting_command());
+    until(|| fixture.read(&pane.id).text.contains("READY"));
+    let start = fixture.read(&pane.id);
+    assert!(start.commands.is_empty());
+    let queue = |command: AgentCommand| {
+        client::call(
+            fixture.directory.path(),
+            Action::CommandReport {
+                id: pane.id.clone(),
+                generation: pane.generation.clone(),
+                command,
+            },
+        )
+    };
+    queue(AgentCommand::OpenFile {
+        path: "src/App.tsx".into(),
+        line: Some(12),
+        column: None,
+    })
+    .unwrap();
+    queue(AgentCommand::ShowDiff {
+        reference: "origin/main".into(),
+        working: true,
+    })
+    .unwrap();
+    let read = |commands_after: Option<u64>| -> ReadResult {
+        serde_json::from_value(fixture.call(Action::Read {
+            id: pane.id.clone(),
+            after: Some(start.sequence),
+            wait_ms: 0,
+            commands_after,
+        }))
+        .unwrap()
+    };
+    let delivered = read(Some(start.command_sequence));
+    assert_eq!(delivered.commands.len(), 2);
+    assert_eq!(
+        delivered.commands[0].command,
+        AgentCommand::OpenFile {
+            path: "src/App.tsx".into(),
+            line: Some(12),
+            column: None
+        }
+    );
+    assert_eq!(read(Some(delivered.command_sequence)).commands.len(), 0);
+    // A view that joins without a cursor starts at the current position.
+    assert!(read(None).commands.is_empty());
+    assert!(queue(AgentCommand::ShowDiff {
+        reference: "HEAD~1".into(),
+        working: false
+    })
+    .is_err());
+    assert!(client::call(
+        fixture.directory.path(),
+        Action::CommandReport {
+            id: pane.id.clone(),
+            generation: uuid_like(),
+            command: AgentCommand::OpenFile {
+                path: "a.ts".into(),
+                line: None,
+                column: None
+            },
+        }
+    )
+    .is_err());
+}
+
+#[test]
+fn attachments_stage_in_chunks_and_leave_with_the_pane() {
+    let fixture = Fixture::new();
+    let pane = fixture.pane(waiting_command());
+    let chunk = |client: &str, data: &[u8], offset: u64| {
+        client::call(
+            fixture.directory.path(),
+            Action::Attachment {
+                id: pane.id.clone(),
+                client: client.into(),
+                name: "notes file.txt".into(),
+                data: STANDARD.encode(data),
+                offset,
+                total: 11,
+            },
+        )
+    };
+    assert!(chunk("intruder", b"hello ", 0).is_err());
+    fixture.call(Action::Attach {
+        id: pane.id.clone(),
+        client: "paste".into(),
+        takeover: false,
+    });
+    assert!(chunk("paste", b"hello ", 0).unwrap()["input"].is_null());
+    let input = chunk("paste", b"world", 6).unwrap()["input"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let path = input.trim().trim_matches(['\'', '"']).to_owned();
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello world");
+    assert!(path.ends_with("notes_file.txt"));
+    assert!(input.ends_with(' '), "input must not submit itself");
+    fixture.call(Action::PaneStop {
+        id: pane.id.clone(),
+    });
+    fixture.call(Action::PaneRemove { id: pane.id });
+    assert!(!Path::new(&path).exists());
+}
+
+fn uuid_like() -> String {
+    "00000000-0000-4000-8000-000000000000".into()
+}
+
+#[test]
+fn direct_argument_launches_never_pass_through_a_local_shell() {
+    let fixture = Fixture::new();
+    let root = fixture.directory.path().to_string_lossy().into_owned();
+    let workspace = fixture.call(Action::WorkspaceCreate {
+        root: root.clone(),
+        name: "Fixture".into(),
+    });
+    let marker = if cfg!(windows) {
+        vec![
+            "cmd.exe".to_owned(),
+            "/D".to_owned(),
+            "/S".to_owned(),
+            "/C".to_owned(),
+            "echo $(whoami) ARGV-LITERAL".to_owned(),
+        ]
+    } else {
+        vec![
+            "printf".to_owned(),
+            "%s\n".to_owned(),
+            "$(whoami) ARGV-LITERAL".to_owned(),
+        ]
+    };
+    let pane: PaneInfo = serde_json::from_value(fixture.call(Action::PaneCreate {
+        launch: Launch {
+            workspace_id: workspace["id"].as_str().unwrap().into(),
+            name: "Direct".into(),
+            cwd: root,
+            shell: String::new(),
+            command: String::new(),
+            resume_on_restart: false,
+            usage_reporting: false,
+            args: marker,
+        },
+        cols: 80,
+        rows: 20,
+    }))
+    .unwrap();
+    until(|| fixture.read(&pane.id).text.contains("ARGV-LITERAL"));
+    // Command substitution stays literal because no shell ever sees it.
+    assert!(fixture.read(&pane.id).text.contains("$(whoami)"));
+}
+
+#[test]
+#[cfg(windows)]
+fn panes_inherit_the_path_the_server_was_launched_with() {
+    use std::fs;
+    let fixture_root = tempfile::tempdir().unwrap();
+    let bin = fixture_root.path().join("bin");
+    fs::create_dir(&bin).unwrap();
+    let system = std::path::PathBuf::from(std::env::var_os("SystemRoot").unwrap());
+    fs::copy(
+        system.join("System32/cmd.exe"),
+        bin.join("emdeck-path-regression-fixture.exe"),
+    )
+    .unwrap();
+    let inherited = std::env::var_os("PATH").unwrap();
+    let path = std::env::join_paths(std::iter::once(bin).chain(std::env::split_paths(&inherited)))
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
+    let fixture = Fixture::with_environment(&[("PATH", &path)]);
+    let pane = fixture.pane("emdeck-path-regression-fixture.exe /D /C echo EMDECK_LAUNCH_PATH_OK");
+    until(|| {
+        fixture
+            .read(&pane.id)
+            .text
+            .contains("EMDECK_LAUNCH_PATH_OK")
+    });
 }

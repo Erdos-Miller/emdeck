@@ -279,8 +279,9 @@ impl Host {
             Payload::Call {
                 device,
                 token,
-                mut action,
+                action,
             } => {
+                let mut action = *action;
                 if !Self::authorized(&state, epoch, &device, &token) {
                     return Err(
                         "Device access was revoked or is invalid. Pair this device again.".into(),

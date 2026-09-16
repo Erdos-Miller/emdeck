@@ -1,6 +1,9 @@
 pub mod agent;
+pub mod attachments;
 pub mod cli;
 pub mod client;
+pub mod codex;
+pub mod command;
 pub mod engine;
 pub mod hooks;
 mod private;
@@ -14,6 +17,7 @@ pub mod ssh;
 pub mod storage;
 pub mod terminal;
 mod terminal_environment;
+pub mod usage;
 pub use private::protect as protect_private_path;
 pub use terminal_environment::configure_terminal_environment;
 

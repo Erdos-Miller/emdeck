@@ -1,6 +1,5 @@
 pub(crate) mod agent_command;
 pub(crate) mod agent_usage;
-pub(crate) mod codex_usage;
 pub(crate) mod git;
 pub(crate) mod git_branches;
 pub(crate) mod git_conflicts;

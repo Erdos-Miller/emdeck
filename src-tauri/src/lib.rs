@@ -2,7 +2,7 @@ mod commands;
 mod services;
 mod state;
 mod windows;
-use services::{agent_command, agent_usage, codex_usage, terminal};
+use services::{agent_command, agent_usage, terminal};
 use state::Projects;
 use tauri::Manager;
 
@@ -22,7 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Projects::default())
         .manage(services::sessions::Sessions::default())
-        .manage(codex_usage::UsageCache::default())
+        .manage(emdeck_session::codex::UsageCache::default())
         .manage(terminal::WindowTerminals::default())
         .setup(|app| {
             app.state::<terminal::WindowTerminals>()

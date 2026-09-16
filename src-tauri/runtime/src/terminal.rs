@@ -1,7 +1,11 @@
 use crate::{
-    agent, error,
+    agent,
+    attachments::Attachments,
+    command::{AgentCommand, CommandEntry, MAX_PENDING},
+    error,
     protocol::{PaneInfo, ReadResult},
     screen::{self, Replies},
+    usage::StatusLine,
     Result,
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -9,7 +13,7 @@ use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, Pt
 use std::{
     collections::VecDeque,
     io::{Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
@@ -38,6 +42,9 @@ pub struct Live {
     bytes: usize,
     owner: Option<(String, Instant)>,
     dirty: bool,
+    command_sequence: u64,
+    commands: VecDeque<CommandEntry>,
+    attachments: Attachments,
 }
 pub struct Terminal {
     pub live: Mutex<Live>,
@@ -45,6 +52,7 @@ pub struct Terminal {
     master: Mutex<Option<Box<dyn MasterPty + Send>>>,
     writer: Mutex<Option<Box<dyn Write + Send>>>,
     killer: Mutex<Option<Box<dyn ChildKiller + Send + Sync>>>,
+    status_line: Mutex<Option<StatusLine>>,
 }
 impl Terminal {
     pub fn new(info: PaneInfo) -> Self {
@@ -62,11 +70,15 @@ impl Terminal {
                 bytes: 0,
                 owner: None,
                 dirty: false,
+                command_sequence: 0,
+                commands: VecDeque::new(),
+                attachments: Attachments::default(),
             }),
             changed: Condvar::new(),
             master: Mutex::new(None),
             writer: Mutex::new(None),
             killer: Mutex::new(None),
+            status_line: Mutex::new(None),
         }
     }
     pub fn info(&self) -> PaneInfo {
@@ -79,9 +91,11 @@ impl Terminal {
     pub fn spawn(
         self: &Arc<Self>,
         mut command: CommandBuilder,
+        status_line: Option<StatusLine>,
         changed: Arc<dyn Fn(bool) + Send + Sync>,
     ) -> Result<()> {
         let info = self.info();
+        *self.status_line.lock().map_err(error)? = status_line;
         command.env("EMDECK_PANE_ID", &info.id);
         command.env("EMDECK_PANE_GENERATION", &info.generation);
         let pair = native_pty_system()
@@ -233,9 +247,16 @@ impl Terminal {
             .resize(size)
             .map_err(error)
     }
-    pub fn read(&self, after: Option<u64>, wait_ms: u32) -> Result<ReadResult> {
+    pub fn read(
+        &self,
+        after: Option<u64>,
+        commands_after: Option<u64>,
+        wait_ms: u32,
+    ) -> Result<ReadResult> {
         let mut live = self.live.lock().map_err(error)?;
-        if after == Some(live.sequence) && live.info.running && wait_ms > 0 {
+        let idle = after == Some(live.sequence)
+            && commands_after.is_none_or(|value| value == live.command_sequence);
+        if idle && live.info.running && wait_ms > 0 {
             live = self
                 .changed
                 .wait_timeout(live, Duration::from_millis(wait_ms.min(25_000) as u64))
@@ -258,13 +279,63 @@ impl Terminal {
                 .flat_map(|(_, bytes)| bytes.clone())
                 .collect()
         };
+        // A first read has no cursor, so it starts at the current position instead
+        // of replaying commands an earlier view already ran.
+        let commands = commands_after
+            .map(|value| {
+                live.commands
+                    .iter()
+                    .filter(|entry| entry.sequence > value)
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
         Ok(ReadResult {
             sequence: live.sequence,
             reset,
             data: STANDARD.encode(data),
             text: live.parser.screen().contents(),
             pane: live.info.clone(),
+            command_sequence: live.command_sequence,
+            commands,
         })
+    }
+    pub fn queue_command(&self, generation: &str, command: AgentCommand) -> Result<()> {
+        let mut live = self.live.lock().map_err(error)?;
+        if live.info.generation != generation || !live.info.running {
+            return Err("Agent occupant changed or stopped.".into());
+        }
+        live.command_sequence += 1;
+        let sequence = live.command_sequence;
+        live.commands.push_back(CommandEntry { sequence, command });
+        while live.commands.len() > MAX_PENDING {
+            live.commands.pop_front();
+        }
+        drop(live);
+        self.changed.notify_all();
+        Ok(())
+    }
+    pub fn paths_input(&self, client: &str, paths: &[String]) -> Result<String> {
+        self.authorize(client)?;
+        let launch = self.live.lock().map_err(error)?.info.launch.clone();
+        crate::attachments::paths_input(&shell_for(&launch.shell), &launch.line(), paths)
+    }
+    pub fn attachment(
+        &self,
+        client: &str,
+        name: &str,
+        data: &[u8],
+        offset: u64,
+        total: u64,
+    ) -> Result<Option<String>> {
+        self.authorize(client)?;
+        let mut live = self.live.lock().map_err(error)?;
+        let launch = live.info.launch.clone();
+        let Some(path) = live.attachments.accept(name, data, offset, total)? else {
+            return Ok(None);
+        };
+        crate::attachments::paths_input(&shell_for(&launch.shell), &launch.line(), &[path])
+            .map(Some)
     }
     pub fn stop(&self) -> Result<()> {
         if let Some(killer) = self.killer.lock().map_err(error)?.as_mut() {
@@ -329,37 +400,94 @@ impl Terminal {
     }
 }
 
-pub fn command(info: &PaneInfo, home: &Path, resume: bool) -> Result<CommandBuilder> {
-    let launch = &info.launch;
-    let shell = if launch.shell.is_empty() {
-        if cfg!(windows) {
-            "powershell.exe".into()
-        } else {
-            std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into())
+/// How a pane's children invoke this binary: the standalone server takes no prefix,
+/// the IDE host needs its `session` argument.
+pub struct Cli {
+    pub exe: PathBuf,
+    pub prefix: Vec<String>,
+}
+impl Cli {
+    pub fn new(embedded: bool) -> Self {
+        Self {
+            exe: std::env::current_exe().unwrap_or_default(),
+            prefix: if embedded {
+                vec!["session".to_owned()]
+            } else {
+                Vec::new()
+            },
         }
+    }
+}
+
+pub fn shell_for(shell: &str) -> String {
+    if !shell.is_empty() {
+        return shell.to_owned();
+    }
+    if cfg!(windows) {
+        "powershell.exe".into()
     } else {
-        launch.shell.clone()
-    };
-    let name = Path::new(&shell)
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into())
+    }
+}
+
+fn shell_name(shell: &str) -> String {
+    Path::new(shell)
         .file_stem()
         .unwrap_or_default()
         .to_string_lossy()
-        .to_lowercase();
+        .to_lowercase()
+}
+
+pub fn command(
+    info: &PaneInfo,
+    home: &Path,
+    resume: bool,
+    cli: &Cli,
+) -> Result<(CommandBuilder, Option<StatusLine>)> {
+    let launch = &info.launch;
+    let shell = shell_for(&launch.shell);
+    let name = shell_name(&shell);
+    let mut status_line = None;
     let mut command = if resume {
-        let args = agent::resume_args(&info.agent)
+        let mut args = agent::resume_args(&info.agent)
             .ok_or("No supported native conversation was registered for this pane.")?;
+        if launch.usage_reporting && args[0] == "claude" {
+            let line = StatusLine::new(&cli.exe, &cli.prefix)?;
+            args.splice(
+                1..1,
+                [
+                    "--settings".to_owned(),
+                    line.settings().to_string_lossy().into_owned(),
+                ],
+            );
+            status_line = Some(line);
+        }
         let mut command = CommandBuilder::new(crate::process::executable(&args[0])?);
         command.args(&args[1..]);
         command
+    } else if !launch.args.is_empty() {
+        let mut command = CommandBuilder::new(crate::process::executable(&launch.args[0])?);
+        command.args(&launch.args[1..]);
+        command
     } else {
+        // Claude's status line is installed through a temporary settings file, so the
+        // plain preset becomes `claude --settings …`; custom commands keep theirs.
+        let launched = if launch.usage_reporting && launch.command.trim() == "claude" {
+            let line = StatusLine::new(&cli.exe, &cli.prefix)?;
+            let launched = line.launch(&shell)?;
+            status_line = Some(line);
+            launched
+        } else {
+            launch.command.clone()
+        };
         let mut command = CommandBuilder::new(crate::process::executable(&shell)?);
-        if !launch.command.trim().is_empty() {
+        if !launched.trim().is_empty() {
             match name.as_str() {
                 "powershell" | "pwsh" => {
-                    command.args(["-NoLogo", "-NoProfile", "-Command", &launch.command])
+                    command.args(["-NoLogo", "-NoProfile", "-Command", &launched])
                 }
-                "cmd" => command.args(["/D", "/S", "/C", &launch.command]),
-                _ => command.args(["-lc", &launch.command]),
+                "cmd" => command.args(["/D", "/S", "/C", &launched]),
+                _ => command.args(["-lc", &launched]),
             }
         } else if matches!(name.as_str(), "powershell" | "pwsh") {
             command.arg("-NoLogo");
@@ -373,8 +501,7 @@ pub fn command(info: &PaneInfo, home: &Path, resume: bool) -> Result<CommandBuil
     command.cwd(&launch.cwd);
     crate::configure_terminal_environment(&mut command);
     command.env("EMDECK_SESSION_HOME", home);
-    if let Ok(exe) = std::env::current_exe() {
-        command.env("EMDECK_CLI_EXE", exe);
-    }
-    Ok(command)
+    command.env("EMDECK_CLI_EXE", &cli.exe);
+    command.env("EMDECK_CLI_ARGS", cli.prefix.join(" "));
+    Ok((command, status_line))
 }
