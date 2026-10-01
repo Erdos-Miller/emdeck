@@ -9,7 +9,10 @@ export default defineConfig({
     viewport: { width: 1440, height: 960 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: { channel: process.platform === 'win32' ? 'msedge' : 'chromium' },
+    launchOptions: {
+      channel: process.platform === 'win32' ? 'msedge' : 'chromium',
+      args: ['--mute-audio'],
+    },
   },
   webServer: {
     command: 'bun run preview --port 1420',

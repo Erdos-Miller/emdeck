@@ -57,6 +57,15 @@ export const restoreMachines = (value: unknown): MachineProfile[] => {
 export const sessionKey = (machine: string, pane: string) => `${machine}/${pane}`;
 export const stateLabel = (pane: SessionPane, connected: boolean) =>
   connected ? pane.agent.state : 'offline';
+// Protocol 1's PTY and replay parser use these bounds (runtime/terminal.rs).
+// The renderer must share them: a wider grid interprets autowrap differently.
+export const sessionTerminalSize = (size: Pick<SessionPane, 'cols' | 'rows'> | undefined) =>
+  size && Number.isFinite(size.cols) && Number.isFinite(size.rows)
+    ? {
+        cols: Math.max(10, Math.min(300, Math.floor(size.cols))),
+        rows: Math.max(2, Math.min(120, Math.floor(size.rows))),
+      }
+    : undefined;
 // The server answers terminal device queries even when detached. Do not forward
 // xterm's duplicate CPR/DA/DSR replies as keyboard input to the agent.
 export const terminalInput = (text: string) =>

@@ -5,6 +5,17 @@
   min-height: 0;
   overflow: auto;
 }
+.rail-spaces-toggle {
+  flex: 1;
+  min-width: 0;
+  gap: 7px;
+  padding: 0;
+  text-align: left;
+  border-radius: 3px;
+}
+.rail-spaces-toggle:hover {
+  color: var(--accent-ink);
+}
 .session-rail.is-collapsed {
   width: 76px;
   min-width: 76px;

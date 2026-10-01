@@ -165,7 +165,9 @@ test('background view attaches existing agents, preserves terminals and separate
   await rail.getByRole('button', { name: /Detached Claude/ }).click();
   await expect(terminal).toBeVisible();
   await terminal.getByTitle('Stop process on its machine').click();
-  await expect(page.getByRole('alert')).toContainText('Its running process will end');
+  await expect(page.getByRole('dialog', { name: 'Stop background session?' })).toContainText(
+    'Its running process will end'
+  );
   await page.getByRole('button', { name: 'Keep running', exact: true }).click();
   expect((await actions()).filter(a => a.method === 'pane.stop')).toHaveLength(0);
   await terminal.getByTitle('Stop process on its machine').click();

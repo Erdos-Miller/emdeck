@@ -1,6 +1,8 @@
 import { paneName, sessionName } from '../services/terminal-title';
 import {
   Bot,
+  ChevronDown,
+  ChevronRight,
   CircleAlert,
   Globe,
   Layers,
@@ -72,11 +74,19 @@ export default function SessionRail({
   const [collapsed, setCollapsed] = useState(
     () => readStored<unknown>('relay:workspace-sidebar-collapsed', false) === true
   );
+  const [spacesHidden, setSpacesHidden] = useState(
+    () => readStored<unknown>('relay:workspace-spaces-hidden', false) === true
+  );
   const bodyId = useId();
+  const spacesId = useId();
   useEffect(() => {
     store('relay:workspace-sidebar-collapsed', collapsed);
   }, [collapsed]);
+  useEffect(() => {
+    store('relay:workspace-spaces-hidden', spacesHidden);
+  }, [spacesHidden]);
   const handleCollapse = () => setCollapsed(value => !value);
+  const handleToggleSpaces = () => setSpacesHidden(value => !value);
   const [query, setQuery] = useState('');
   const [attentionOnly, setAttentionOnly] = useState(false);
   const spaces = terminalSpaces(panes, projectName);
@@ -115,8 +125,19 @@ export default function SessionRail({
       aria-label='Terminal workspaces'
     >
       <header className='rail-heading'>
-        <Layers size={14} className='rail-expanded-only' />
-        <strong className='rail-expanded-only'>SPACES</strong>
+        <button
+          type='button'
+          className='rail-spaces-toggle rail-expanded-only'
+          onClick={handleToggleSpaces}
+          aria-label={spacesHidden ? 'Show workspace list' : 'Hide workspace list'}
+          title={spacesHidden ? 'Show workspace list' : 'Hide workspace list'}
+          aria-expanded={!spacesHidden}
+          aria-controls={spacesId}
+        >
+          <Layers size={14} />
+          <strong>SPACES</strong>
+          {spacesHidden ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        </button>
         <button
           className='icon-button rail-expanded-only'
           title='Manage remote connections'
@@ -150,7 +171,7 @@ export default function SessionRail({
             <small>{panes.length + background.length}</small>
           </button>
         )}
-        <div className='session-spaces rail-expanded-only'>
+        <div id={spacesId} className='session-spaces rail-expanded-only' hidden={spacesHidden}>
           <button
             className={`space-button ${selectedSpace === 'all' ? 'active' : ''}`}
             onClick={handleAll}

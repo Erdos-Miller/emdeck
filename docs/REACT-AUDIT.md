@@ -1,5 +1,65 @@
 # React audit — 0.1.19
 
+## Unreleased — hide individual sessions
+
+React Doctor 0.9.13 retains eight reviewed errors and 74 warnings, with no new
+rule/file findings after moving visibility projection into the session
+controller and using a Set for restore lookups. The existing TerminalContent
+composition advisory remains within the repository's size budget. Hidden views
+stay keyed and mounted; browser tests cover mixed splits, all terminal views,
+keyboard restoration, saved project preferences, retained output and attachment
+counts, and notification playback while a session is hidden. No diagnostics were
+suppressed.
+
+## Unreleased — session sound notifications
+
+React Doctor 0.9.13 retains eight reviewed errors and reports 74 warnings. The
+new advisory flags `filter().map()` when projecting connected background
+sessions in `useSessionNotifications`. This readable projection operates on the
+existing small snapshot collection; it starts no IO, polling or terminal
+instances. Sound side effects run after commit through a typed port, and native
+observations remain the status source. Browser tests exercise real Web Audio
+graphs with browser output muted, saved settings, hidden local terminals and
+unattached background sessions. No diagnostics were suppressed.
+
+## Unreleased — background session Stop and Remove
+
+React Doctor 0.9.13 retains eight reviewed errors and 73 warnings, with no new
+rule/file findings. One desk-owned operation state drives the portaled dialog
+and both removal entry points. Pending requests block duplicate submission;
+failed requests keep their target and error for explicit retry. Browser tests
+cover cancellation, focus restoration, small windows, removal cleanup and
+preservation of other sessions. No rules were suppressed.
+
+## Unreleased — background terminal screen alignment
+
+React Doctor 0.9.13 retains eight reviewed errors and 73 warnings, with no new
+rule/file findings. Background rendering now shares the server's grid limits and
+decodes restored screens before fitting. Resize requests remain within the
+existing terminal lifetime and serialize slow remote updates. Browser coverage
+checks saved cursor positions, wide/tall windows, rapid resizing, stable mounts
+and existing scrollback behavior. No rules were suppressed.
+
+## Unreleased — mixed sessions in Split view
+
+React Doctor 0.9.13 retains eight reviewed errors and 73 warnings, with no new
+rule/file findings. Session selection preserves All sessions and only broadens
+an explicit workspace filter when selecting outside it. The existing canvas
+keeps terminal identities and attachment lifetimes. Browser regressions cover
+three local and two background sessions across different workspaces, sidebar and
+tab selection, all three layouts and explicit workspace filters. No rules were
+suppressed.
+
+## Unreleased — hide the workspace list
+
+React Doctor 0.9.13 reports the same eight reviewed errors and 73 warnings. The
+additional advisory is the 300-line component recommendation for `SessionRail`,
+which remains within the mandatory 500-line budget. The new disclosure adds
+presentation state only; it preserves selected spaces, session filters, terminal
+mounts and background attachments. Browser checks cover keyboard use, saved
+visibility, compact-mode independence and a short light window. No diagnostics
+were suppressed.
+
 ## Unreleased — project settings promotion and durable machines
 
 React Doctor 0.9.13 reports eight previously reviewed errors and 72 warnings

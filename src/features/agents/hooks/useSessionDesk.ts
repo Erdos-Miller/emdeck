@@ -33,7 +33,13 @@ export const useSessionDesk = (active: boolean) => {
   const [space, setSpace] = useState('all');
   const [solo, setSolo] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [stop, setStop] = useState<{ machine: MachineConnection; pane: SessionPane } | null>(null);
+  const [operation, setOperation] = useState<{
+    kind: 'stop' | 'remove';
+    machine: MachineConnection;
+    pane: SessionPane;
+  } | null>(null);
+  const [pending, setPending] = useState(false);
+  const [operationError, setOperationError] = useState('');
   useEffect(() => {
     store('relay:session-views', attached);
   }, [attached]);
@@ -56,12 +62,36 @@ export const useSessionDesk = (active: boolean) => {
     setAttached(previous => previous.filter(id => id !== key));
     setSolo(null);
   };
-  const confirmStop = () => {
-    if (!stop?.machine.connection) return;
-    void sessionCall(stop.machine.connection, 'pane.stop', { id: stop.pane.id }).catch(e =>
-      setError(String(e))
-    );
-    setStop(null);
+  const requestOperation = (
+    kind: 'stop' | 'remove',
+    machine: MachineConnection,
+    pane: SessionPane
+  ) => {
+    if (pending) return;
+    setOperationError('');
+    setOperation({ kind, machine, pane });
+  };
+  const dismissOperation = () => {
+    if (!pending) setOperation(null);
+  };
+  const confirmOperation = async () => {
+    if (!operation || pending) return;
+    setPending(true);
+    setOperationError('');
+    try {
+      const connection = operation.machine.connection;
+      if (!connection) throw new Error('Connect to this machine before changing its sessions.');
+      await sessionCall(connection, operation.kind === 'stop' ? 'pane.stop' : 'pane.remove', {
+        id: operation.pane.id,
+      });
+      if (operation.kind === 'remove')
+        detach(sessionKey(operation.machine.profile.id, operation.pane.id));
+      setOperation(null);
+    } catch (error) {
+      setOperationError(String(error));
+    } finally {
+      setPending(false);
+    }
   };
   const sessions = backgroundSessions(controller.machines);
   const attachedKeys = new Set(attached);
@@ -81,15 +111,18 @@ export const useSessionDesk = (active: boolean) => {
     space,
     solo,
     error: error || controller.storageError,
-    stop,
+    operation,
+    pending,
+    operationError,
     setError,
-    setStop,
+    requestOperation,
+    dismissOperation,
     setSolo,
     selectSpace,
     attach,
     launch,
     detach,
-    confirmStop,
+    confirmOperation,
   };
 };
 export type SessionDeskController = ReturnType<typeof useSessionDesk>;

@@ -43,6 +43,7 @@ src/
     desktop/              Typed Tauri transport
     preview/              Explicit browser demo adapter
     storage/              Resilient local preference persistence
+    audio/                Notification tone playback through Web Audio
   styles/                 Styles split by ownership; ordered from styles.css
 src-tauri/src/
   lib.rs                  Registration and application startup
@@ -150,6 +151,18 @@ Appearance updates reconfigure the existing terminal. Hidden and maximized panes
 remain mounted. CodeMirror samples a document on tab switches and separately
 applies content/theme updates, preserving per-file undo history.
 
+Session sounds use the agents feature's pure transition tracker and a typed
+sound port. The app feeds existing local observations and connected machine
+snapshots, including sessions outside the visible layout; it adds no polling or
+connections. First snapshots, reconnects and generation changes establish a
+silent baseline. Ambiguous redraws retain previous evidence, and muted
+transitions still advance the baseline. Waiting, completion and failed-process
+events have distinct tones; simultaneous events share the most urgent enabled
+sound. The platform owns one Web Audio context, unlocked by interaction, with
+short generated tones and no downloaded assets. Notification preferences live in
+`relay:settings` and cannot be overridden by project files. Appearance and audio
+updates preserve terminals.
+
 The shared terminal fitter preserves either output following or a marker at the
 historical line being read. Markers track reflow and trimming through rapid
 resizes and are released after restoration, cancellation or disposal.
@@ -157,6 +170,20 @@ Restoration waits for xterm's viewport synchronization and never carries a
 position into a different buffer. Both terminal views cancel pending restoration
 on wheel, pointer, keyboard and touch interaction so user input takes
 precedence.
+
+Background displays share protocol 1's 10–300 column and 2–120 row limits with
+the runtime PTY and screen parser. Initial and resynchronized snapshots are
+decoded at their reported dimensions before fitting the view; layout observers
+wait for replay to finish. Resize requests run in order and coalesce pending
+drag updates, so a slow remote request cannot overwrite a newer size. These
+changes preserve the mounted xterm and the running session server.
+
+The session desk owns explicit Stop and Remove operations. Their confirmation
+dialog is portaled above the workspace so terminal clipping and view changes
+cannot conceal it. Requests disable repeat submission and retain errors for
+retry; only successful removal clears the saved attachment. Header and machine
+list actions use the same controller. Native running-state checks still reject
+removing a live process.
 
 Background pane layout belongs to the agents feature. Pure tree and geometry
 services handle presets, docking, swapping, minimum sizes and split ratios; the
@@ -186,6 +213,22 @@ The pure background-workspace projection keeps machine-qualified IDs distinct;
 the status presenter uses server evidence and labels disconnected snapshots as
 offline. Merely listing a session does not take an input lease or launch it.
 
+Focusing a session preserves an All sessions selection, so clearing a maximized
+pane restores the mixed local/background split. A specific workspace filter is
+kept when the chosen session belongs to it; choosing a session outside that
+filter reveals All sessions. Focus and workspace filtering never remount panes
+or reattach an already-open background session.
+
+Individual session visibility is a project-scoped view preference under
+`relay:hidden-sessions:<encoded project root>`. Hiding removes a pane from the
+visible canvas projection, Workspaces rail, tabs and agent overview, while its
+keyed terminal stays mounted and notification observations continue. The shared
+Hidden sessions disclosure restores one or all panes, clears solo filters and
+reveals a compatible view without reattaching or restarting anything. Background
+machine management can explicitly reopen a hidden attachment. Project
+replacement loads its own visibility preference without changing terminal
+ownership.
+
 The Workspaces rail remembers its compact mode under the additive
 `relay:workspace-sidebar-collapsed` preference. `SessionRailJob` presents the
 same status model and theme tokens in both sizes. Collapse only changes sidebar
@@ -194,6 +237,12 @@ The compact list pauses the hidden text search while retaining the explicit
 attention filter, so an old query cannot conceal a waiting job. Expanded search
 text is restored on expansion. Mini jobs retain status icons, accessible names,
 full hover details and keyboard focus; their list scrolls independently.
+
+The SPACES heading separately hides the workspace list with the additive
+`relay:workspace-spaces-hidden` preference. It preserves the selected workspace,
+session search and attention filter, and does not affect terminal mounts or
+background connections. The control and its expanded state remain accessible
+when the list is hidden; compact sidebar mode retains its own preference.
 
 Desktop terminals observe xterm's OSC title events and publish bounded plain
 text metadata without changing pane identity or launch inputs. The agents

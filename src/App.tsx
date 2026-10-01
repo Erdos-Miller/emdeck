@@ -17,6 +17,8 @@ import type { SettingsOverrides } from './shared/contracts/projectConfig';
 import type { Settings as SettingsType } from './shared/contracts/workspace';
 import Dialog, { Modal } from './shared/ui/Dialog';
 import { FileIcon } from './shared/ui/FileIcon';
+import type { NotificationSettings } from './shared/contracts/notifications';
+import { previewNotificationSound } from './platform/audio/notifications';
 const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl';
 export default function App() {
   const handleContextClick = () => {
@@ -73,6 +75,8 @@ export default function App() {
   const settingsScope: SettingsScope = projectScopeAvailable ? chosenScope : 'global';
   const handleSettingsChange = (change: Partial<SettingsType>) =>
     updateSettings(change, settingsScope);
+  const handleNotificationsChange = (notifications: NotificationSettings) =>
+    model.setGlobalSettings({ notifications });
   const handleSettingsReset = (field: keyof SettingsOverrides) => resetOverride(field);
   const handleSettingsResetAll = () => {
     for (const field of Object.keys(overrides) as (keyof SettingsOverrides)[]) resetOverride(field);
@@ -112,6 +116,8 @@ export default function App() {
           projectName={project?.name ?? ''}
           onScopeChange={setChosenScope}
           onChange={handleSettingsChange}
+          onNotificationsChange={handleNotificationsChange}
+          onNotificationPreview={previewNotificationSound}
           onReset={handleSettingsReset}
           onResetAll={handleSettingsResetAll}
           onClose={handleSettingsOpenClose}

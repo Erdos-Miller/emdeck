@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useRef } from 'react';
 import { Plus, TerminalSquare } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { TerminalPanelModel } from './terminal-panel-model';
@@ -8,6 +8,8 @@ import SessionRail from '../../features/agents/components/SessionRail';
 import SessionDesk from '../../features/agents/components/SessionDesk';
 import SessionNotices from '../../features/agents/components/SessionNotices';
 import SessionCanvas from '../../features/agents/components/SessionCanvas';
+import HiddenSessions from '../../features/agents/components/HiddenSessions';
+import { sessionKey } from '../../features/agents/services/session-model';
 import SessionTabs from './SessionTabs';
 import { paneName, sessionName } from '../../features/agents/services/terminal-title';
 import type { RemoteProfile } from '../../shared/contracts/remote';
@@ -54,6 +56,12 @@ export default function TerminalContent({
     addPane,
   } = model;
   const background = workspace.background;
+  const hiddenButton = useRef<HTMLButtonElement>(null);
+  const hideSession = (key: string) => {
+    workspace.hideSession(key);
+    hiddenButton.current?.focus();
+  };
+  const hidden = workspace.hiddenItems;
   const server = workspace.view === 'server';
   const showMachines = server || (workspace.view === 'workspaces' && workspace.manageBackground);
   const handleConnections = () => workspace.setConnectionsOpen(true);
@@ -71,11 +79,13 @@ export default function TerminalContent({
   const visibleBackground =
     workspace.view === 'workspaces'
       ? background.tiles.filter(
-          session => workspace.activeSpace === 'all' || session.space === workspace.activeSpace
+          session =>
+            !workspace.hiddenSessions.has(session.key) &&
+            (workspace.activeSpace === 'all' || session.space === workspace.activeSpace)
         )
       : [];
   const visibleKeys = server
-    ? background.visibleKeys
+    ? background.visibleKeys.filter(key => !workspace.hiddenSessions.has(key))
     : [
         ...workspace.visiblePanes.flatMap(pane =>
           (workspace.view === 'panes' || !workspace.maxBackground) &&
@@ -98,10 +108,8 @@ export default function TerminalContent({
     if (!server) workspace.selectSpace(key === 'all' ? key : `background:${key}`);
   };
   const handleAttach: React.ComponentProps<typeof SessionDesk>['onAttach'] = (machine, pane) => {
-    if (background.attach(machine, pane) && !server) {
-      workspace.selectSpace('all');
-      workspace.clearMaximized();
-    }
+    if (background.attach(machine, pane))
+      workspace.showSessions([sessionKey(machine.profile.id, pane.id)]);
   };
   const tiles = [
     ...panes.map(pane => {
@@ -110,6 +118,7 @@ export default function TerminalContent({
         setMaxPane(value => (value === pane.id ? null : pane.id));
       };
       const handleClose = () => void closePane(pane);
+      const handleHide = () => hideSession(`terminal:${pane.id}`);
       const handlePaneRename = () => void renameAgent(pane);
       const handleRestart = () => restartAgent(pane);
       const handleFocus = () => {
@@ -128,6 +137,7 @@ export default function TerminalContent({
               maximized={maxPane === pane.id}
               onMaximize={handleMaximize}
               onClose={handleClose}
+              onHide={handleHide}
               onRename={handlePaneRename}
               onRestart={handleRestart}
               onState={paneState}
@@ -147,6 +157,7 @@ export default function TerminalContent({
     }),
     ...background.tiles.map(session => {
       const handleDetach = () => workspace.detachBackground(session.key);
+      const handleHide = () => hideSession(session.key);
       const handleMaximize = () => {
         if (server) background.setSolo(previous => (previous === session.key ? null : session.key));
         else {
@@ -166,6 +177,7 @@ export default function TerminalContent({
               settings={settings}
               arrangeControl={grip}
               onDetach={handleDetach}
+              onHide={handleHide}
               onMaximize={handleMaximize}
               onFocus={handleFocus}
               focusRequest={
@@ -183,7 +195,7 @@ export default function TerminalContent({
     <div className={`terminal-workspace ${server ? 'session-desk' : ''}`}>
       {workspace.view === 'workspaces' && !showMachines && (
         <SessionRail
-          panes={panes}
+          panes={workspace.listedPanes}
           projectName={project?.name ?? 'No project'}
           branch={git?.branch}
           profiles={workspace.profiles}
@@ -197,7 +209,7 @@ export default function TerminalContent({
           onConnect={handleConnect}
           onConnections={handleConnections}
           onLaunch={handleLaunch}
-          background={background.sessions}
+          background={workspace.listedBackground}
           attached={background.attachedKeys}
           selectedBackground={workspace.selectedBackground}
           onBackground={workspace.selectBackground}
@@ -221,7 +233,7 @@ export default function TerminalContent({
       </div>
       {project && (
         <AgentPanel
-          panes={panes}
+          panes={workspace.listedPanes}
           states={paneStates}
           observations={agentObservations}
           usage={agentUsage}
@@ -240,7 +252,12 @@ export default function TerminalContent({
         />
       )}
       <div className='terminal-canvas session-stage'>
-        {workspace.view !== 'panes' && <SessionNotices model={background} />}
+        <SessionNotices model={background} />
+        <HiddenSessions
+          sessions={hidden}
+          onShow={workspace.showSessions}
+          buttonRef={hiddenButton}
+        />
         {workspace.view === 'workspaces' && (
           <SessionTabs
             workspace={workspace}
@@ -259,14 +276,22 @@ export default function TerminalContent({
           gridLayout={server ? undefined : layout}
           onArrange={handleArrange}
           empty={
-            server ? undefined : (
+            server && !hidden.length ? undefined : (
               <div className='terminal-empty'>
                 <div className='terminal-empty-icon'>
                   <TerminalSquare size={24} />
                 </div>
                 <div>
-                  <h3>Bring your agents to the table.</h3>
-                  <p>Start a terminal or open a background session from the sidebar.</p>
+                  <h3>
+                    {hidden.length
+                      ? 'Your sessions are tucked away.'
+                      : 'Bring your agents to the table.'}
+                  </h3>
+                  <p>
+                    {hidden.length
+                      ? 'Open Hidden sessions above to show them again.'
+                      : 'Start a terminal or open a background session from the sidebar.'}
+                  </p>
                 </div>
                 <button className='button secondary' disabled={!project} onClick={handleStart}>
                   <Plus size={14} />
