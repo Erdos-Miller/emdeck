@@ -1,10 +1,12 @@
 import { readStored } from '../../../platform/storage/preferences';
 import type { Settings } from '../../../shared/contracts/workspace';
 import { defaults } from './defaults';
+import { readNotificationSettings } from '../services/notification-settings';
 export function loadSettings(): Settings {
   const s = { ...defaults, ...readStored<Partial<Settings>>('relay:settings', {}) };
   return {
     ...s,
+    notifications: readNotificationSettings(s.notifications),
     theme: ['dark', 'light', 'graphite'].includes(s.theme) ? s.theme : 'dark',
     accent: /^#[0-9a-f]{6}$/i.test(s.accent) ? s.accent : defaults.accent,
     fontSize: Math.min(24, Math.max(10, Number(s.fontSize) || 13)),

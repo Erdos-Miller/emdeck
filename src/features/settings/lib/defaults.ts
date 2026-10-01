@@ -1,3 +1,4 @@
+import { defaultNotifications } from '../services/notification-settings';
 export const defaults: Settings = {
   theme: 'dark',
   accent: '#b8ee86',
@@ -11,6 +12,7 @@ export const defaults: Settings = {
   scrollback: 3000,
   detectRunScripts: true,
   reopenLastProject: true,
+  notifications: defaultNotifications,
   terminalPlacement: 'workspace',
 };
 import type { Settings } from '../../../shared/contracts/workspace';

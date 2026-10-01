@@ -6,6 +6,11 @@ import { accentPresets } from '../lib/accents';
 import { defaults } from '../lib/defaults';
 import type { SettingsScope } from './SettingsScope';
 import { OverrideMarker, ScopeSelector } from './SettingsScope';
+import NotificationSettings from './NotificationSettings';
+import type {
+  NotificationEvent,
+  NotificationSettings as NotificationPreferences,
+} from '../../../shared/contracts/notifications';
 export default function Settings({
   settings,
   overrides,
@@ -17,6 +22,8 @@ export default function Settings({
   onReset,
   onResetAll,
   onClose,
+  onNotificationsChange,
+  onNotificationPreview,
 }: {
   settings: SettingsType;
   overrides: SettingsOverrides;
@@ -28,6 +35,8 @@ export default function Settings({
   onReset: (field: keyof SettingsOverrides) => void;
   onResetAll: () => void;
   onClose: () => void;
+  onNotificationsChange: (settings: NotificationPreferences) => void;
+  onNotificationPreview: (event: NotificationEvent, volume: number) => Promise<boolean>;
 }) {
   const handleChange: React.ComponentProps<'input'>['onChange'] = e =>
     update({ reopenLastProject: e.target.checked });
@@ -71,6 +80,11 @@ export default function Settings({
         available={projectScopeAvailable}
         projectName={projectName}
         onChange={onScopeChange}
+      />
+      <NotificationSettings
+        settings={settings.notifications}
+        onChange={onNotificationsChange}
+        onPreview={onNotificationPreview}
       />
       {scope === 'global' && (
         <div className='settings-section'>

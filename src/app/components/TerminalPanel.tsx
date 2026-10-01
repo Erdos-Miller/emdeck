@@ -16,6 +16,7 @@ import RemoteConnections from '../../features/agents/components/RemoteConnection
 import type { RemoteProfile, TerminalView } from '../../shared/contracts/remote';
 import type { TerminalPanelModel } from './terminal-panel-model';
 import { useTerminalSessions } from '../hooks/useTerminalSessions';
+import { useSessionNotifications } from '../hooks/useSessionNotifications';
 import TerminalContent from './TerminalContent';
 import TerminalLaunchMenu from './TerminalLaunchMenu';
 type Props = { model: TerminalPanelModel };
@@ -65,6 +66,7 @@ export default function TerminalPanel({ model }: Props) {
     setTerminalVisible,
   } = model;
   const workspace = useTerminalSessions(model);
+  useSessionNotifications(model, workspace.background.sessions);
   const handleViewChange: React.ChangeEventHandler<HTMLSelectElement> = event => {
     workspace.setView(event.target.value as TerminalView);
   };

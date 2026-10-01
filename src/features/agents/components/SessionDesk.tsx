@@ -18,6 +18,8 @@ export default function SessionDesk({
   onAttach: (machine: MachineConnection, pane: SessionPane) => void;
 }) {
   const handleAll = () => onSpace('all');
+  const handleRemovePane = (machine: MachineConnection, pane: SessionPane) =>
+    model.requestOperation('remove', machine, pane);
   const handleLaunch: React.ComponentProps<typeof SessionSidebar>['onLaunch'] = async (
     machine,
     workspace,
@@ -40,6 +42,7 @@ export default function SessionDesk({
         onConnect={model.connect}
         onDisconnect={model.disconnect}
         onRemove={model.remove}
+        onRemovePane={handleRemovePane}
         onSave={model.save}
         onLaunch={handleLaunch}
         onError={model.setError}

@@ -1,4 +1,5 @@
 import type { SshProfile } from './remote';
+import type { NotificationSettings } from './notifications';
 
 export interface Project {
   root: string;
@@ -142,6 +143,7 @@ export interface Settings {
   scrollback: number;
   detectRunScripts: boolean;
   reopenLastProject: boolean;
+  notifications: NotificationSettings;
   terminalPlacement: 'workspace' | 'editor';
 }
 export type TerminalEvent =

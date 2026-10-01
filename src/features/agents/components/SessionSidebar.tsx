@@ -24,6 +24,7 @@ interface Props {
   onConnect: (profile: MachineProfile) => Promise<void>;
   onDisconnect: (id: string) => void;
   onRemove: (id: string) => Promise<void>;
+  onRemovePane: (machine: MachineConnection, pane: SessionPane) => void;
   onSave: (profile: MachineProfile) => void;
   onLaunch: (
     machine: MachineConnection,
@@ -44,6 +45,7 @@ export default function SessionSidebar({
   onConnect,
   onDisconnect,
   onRemove,
+  onRemovePane,
   onSave,
   onLaunch,
   onError,
@@ -171,6 +173,7 @@ export default function SessionSidebar({
               onDisconnect={handleDisconnect}
               onRename={handleRename}
               onRemove={handleRemove}
+              onRemovePane={onRemovePane}
               onWorkspace={onWorkspace}
               onAttach={onAttach}
               onError={onError}

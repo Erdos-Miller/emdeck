@@ -18,6 +18,17 @@ and background terminals together; **Split view**, **Side by side**, **Stacked**
 and **Grid** control their arrangement. Unopened background agents remain listed
 without taking an input lease. Offline machines show stale activity as offline.
 
+**Settings → Sound notifications** controls sounds for **Waiting for me**,
+**Done** and **Error**, with a master switch, volume, individual previews and an
+option to play only when the window is unfocused. These personal settings apply
+across projects. Sounds default to enabled at 40% volume. They follow local
+activity and connected background machine updates even when a terminal is hidden
+or unattached. Waiting covers questions and approval prompts; completion follows
+a finished agent turn or a successful process exit; errors cover failed launches
+and nonzero exits. Opening, reconnecting and repeated unchanged statuses do not
+sound. Sound playback becomes available after interacting with the window; no
+old alerts are queued.
+
 Switching between Workspaces and Background sessions preserves existing terminal
 views, scrollback and input ownership. Panes shows ordinary terminals while
 background views remain attached but hidden. **Detach** removes the view from
@@ -66,10 +77,13 @@ machines. Filtering, changing themes and arranging panes preserve live views and
 scrollback. Up to 64 views can be attached at once.
 
 **Detach** leaves the process running. **Stop** explicitly ends the process
-after confirmation. Stopped entries offer **Start again**, **Resume** when a
-native conversation ID is registered, and **Remove**. Disconnect leaves the
-server running; cached offline entries have input disabled. Reconnect explicitly
-after a network error.
+after confirmation in a dialog above the workspace. The stopped terminal's
+header offers **Remove**, with another confirmation. Stopped machine-list
+entries also offer **Start again**, **Resume** when a native conversation ID is
+registered, and **Remove**. Failed actions stay in the dialog for retry;
+removing a session clears its saved view and leaves project files intact.
+Disconnect leaves the server running; cached offline entries have input
+disabled. Reconnect explicitly after a network error.
 
 Enabled machine preferences and attached view IDs are remembered. Previously
 enabled machines reconnect when this view opens again. Opening a project alone
@@ -169,6 +183,11 @@ a terminal or the server is a separate explicit operation. A slow or
 disconnected client cannot stop PTY reads. Output buffers, frame sizes, clients
 and terminal counts are bounded. Inactive machines send metadata changes, not
 every screen.
+
+Background terminals support up to 300 columns and 120 rows. Larger windows
+leave space beyond that grid so the display and server agree on line wrapping.
+Attaching restores output at its saved size before fitting the current pane;
+resizing does not restart the process.
 
 ## Persistence and authority
 

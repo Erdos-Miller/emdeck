@@ -72,6 +72,120 @@ const colors = (page: Page) =>
       }))
     );
 
+test('hiding spaces keeps sessions usable, preserves terminals and remembers the separate preference', async ({
+  page,
+}, testInfo) => {
+  await setup(page);
+  const spaces = rail(page).locator('.session-spaces');
+  const selectedSpace = await spaces.locator('.space-button.active').textContent();
+  const sessionList = rail(page).locator('.rail-sessions');
+  const originalHeight = (await sessionList.boundingBox())!.height;
+  const search = rail(page).getByLabel('Find terminal sessions');
+  await search.fill('Architecture');
+  const hide = rail(page).getByRole('button', { name: 'Hide workspace list', exact: true });
+  await expect(hide).toHaveAttribute('aria-expanded', 'true');
+  await expect(hide).toHaveAttribute('aria-controls', (await spaces.getAttribute('id'))!);
+  await hide.focus();
+  await page.keyboard.press('Enter');
+  const show = rail(page).getByRole('button', { name: 'Show workspace list', exact: true });
+  await expect(show).toHaveAttribute('aria-expanded', 'false');
+  await expect(show).toBeFocused();
+  await expect(spaces).toBeHidden();
+  await expect(
+    rail(page).getByRole('button', { name: 'Background machines', exact: true })
+  ).toBeHidden();
+  await expect(search).toBeVisible();
+  await expect(search).toHaveValue('Architecture');
+  await expect(
+    rail(page).getByRole('button', { name: 'Needs attention', exact: true })
+  ).toBeVisible();
+  await expect(
+    rail(page).getByRole('button', { name: 'Launch an agent', exact: true })
+  ).toBeVisible();
+  await expect(sessionList.locator('.rail-session')).toHaveCount(1);
+  expect((await sessionList.boundingBox())!.height).toBeGreaterThan(originalHeight);
+  await emit(page, 0, text('\x1b[2J\x1b[H\x1b[999;1HWorking...\r\nEsc to interrupt'));
+  await expect(rail(page).getByTitle('Focus Architecture', { exact: true })).toHaveAttribute(
+    'data-status',
+    'working'
+  );
+  await page.screenshot({ path: testInfo.outputPath('workspace-list-hidden.png') });
+  await page.keyboard.press('Space');
+  await expect(spaces).toBeVisible();
+  await expect(spaces.locator('.space-button.active')).toHaveText(selectedSpace!);
+  await hide.click();
+  await collapse(page);
+  await expand(page);
+  await expect(spaces).toBeHidden();
+  await expect(search).toHaveValue('Architecture');
+  for (const view of ['panes', 'workspaces'])
+    await page.getByLabel('Terminal view').selectOption(view);
+  await expect(spaces).toBeHidden();
+  await expect(page.locator('.xterm[data-stable="yes"]')).toHaveCount(4);
+  const lifecycle = await page.evaluate(() =>
+    (window as unknown as { __emdeckCalls: { command: string }[] }).__emdeckCalls
+      .filter(call => ['terminal_spawn', 'terminal_close'].includes(call.command))
+      .map(call => call.command)
+  );
+  expect(lifecycle).toEqual(Array(4).fill('terminal_spawn'));
+  await page.reload();
+  await expect(show).toBeVisible();
+  await expect(spaces).toBeHidden();
+  await expect(rail(page)).not.toHaveClass(/is-collapsed/);
+  await expect(sessionList.locator('.rail-session')).toHaveCount(4);
+  await show.click();
+  await page.reload();
+  await expect(spaces).toBeVisible();
+});
+
+test('hiding spaces retains background attachments and controls in a short window', async ({
+  page,
+}, testInfo) => {
+  await installBackgroundLayout(page);
+  await connectBackgroundLayout(page);
+  await page.getByLabel('Terminal view').selectOption('workspaces');
+  await page.getByTitle('Expand terminals', { exact: true }).click();
+  await rail(page)
+    .getByRole('button', { name: /^codex remote —.*Linux server/ })
+    .click();
+  const terminal = backgroundPane(page, 'remote/1');
+  await terminal.locator('.xterm').evaluate(el => el.setAttribute('data-stable', 'remote'));
+  await page.getByTitle('Settings', { exact: true }).click();
+  await page.getByRole('button', { name: 'Light', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 950, height: 420 });
+  await rail(page).getByRole('button', { name: 'Hide workspace list', exact: true }).click();
+  await expect(rail(page).locator('.session-spaces')).toBeHidden();
+  await expect(
+    rail(page).getByRole('button', { name: 'Show workspace list', exact: true })
+  ).toBeInViewport();
+  await expect(rail(page).getByLabel('Find terminal sessions')).toBeInViewport();
+  await expect(
+    rail(page).getByRole('button', { name: 'Needs attention', exact: true })
+  ).toBeInViewport();
+  expect(await rail(page).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await terminal.locator('.xterm-helper-textarea').fill('input while spaces are hidden');
+  await expect
+    .poll(async () =>
+      (await backgroundCalls(page))
+        .filter(({ action }) => action.method === 'pane.input')
+        .map(({ action }) => (action.method === 'pane.input' ? action.params.text : ''))
+        .join('')
+    )
+    .toContain('input while spaces are hidden');
+  await page.screenshot({ path: testInfo.outputPath('workspace-list-hidden-short-light.png') });
+  await rail(page).getByRole('button', { name: 'Show workspace list', exact: true }).click();
+  await expect(rail(page).locator('.session-spaces')).toBeVisible();
+  await expect(terminal.locator('.xterm')).toHaveAttribute('data-stable', 'remote');
+  const calls = await backgroundCalls(page);
+  expect(calls.filter(({ action }) => action.method === 'pane.attach')).toHaveLength(1);
+  expect(
+    calls.filter(({ action }) =>
+      ['pane.detach', 'pane.stop', 'pane.restart', 'pane.create'].includes(action.method)
+    )
+  ).toHaveLength(0);
+});
+
 for (const theme of ['Dark', 'Light', 'Graphite']) {
   test(`compact workspace jobs retain status colors and keyboard selection in ${theme}`, async ({
     page,

@@ -62,7 +62,7 @@ export const useTerminalWorkspace = ({
     clearMaximized();
   };
   const selectPane = (pane: Pane, solo = true) => {
-    setSpace(spaceId(pane));
+    if (activeSpace !== 'all' && activeSpace !== spaceId(pane)) setSpace('all');
     focus(pane.id, solo);
   };
   const saveProfile = (profile: RemoteProfile) => {

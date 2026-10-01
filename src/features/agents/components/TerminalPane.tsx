@@ -23,6 +23,7 @@ import { bindTerminalAttachments } from '../lib/terminalAttachments';
 import { bindTerminalKeyboard } from '../lib/terminalKeyboard';
 import { readAgentScreen } from '../services/agent-screen';
 import { createAgentActivityTracker } from '../services/agent-activity-tracker';
+import HideSessionButton from './HideSessionButton';
 interface Props {
   pane: Pane;
   root: string;
@@ -30,6 +31,7 @@ interface Props {
   maximized: boolean;
   onMaximize: () => void;
   onClose: () => void;
+  onHide: () => void;
   onRename: () => void;
   onRestart: () => void;
   onState: (id: string, state: PaneState) => void;
@@ -50,6 +52,7 @@ export default function TerminalPane({
   maximized,
   onMaximize,
   onClose,
+  onHide,
   onRename,
   onRestart,
   onState,
@@ -239,7 +242,7 @@ export default function TerminalPane({
               ended = true;
               nativeId.current = null;
               clearTimeout(activityTimer);
-              update('exited');
+              update(event.code !== null && event.code !== 0 ? 'error' : 'exited');
               term.writeln(
                 `\r\n\x1b[90m[${pane.remote ? 'SSH disconnected' : 'Process exited'}${event.code === null ? '' : ` with code ${event.code}`} · ${pane.remote ? 'reconnect to attach again' : 'restart to run again'}]\x1b[0m`
               );
@@ -370,6 +373,7 @@ export default function TerminalPane({
           {pane.remote ? remoteStatus(state) : agentStatus(state, observation).label}
         </span>
         <span className='spacer' />
+        <HideSessionButton name={paneName(pane)} onHide={onHide} />
         <button
           className='icon-button'
           title='Copy selected terminal text'

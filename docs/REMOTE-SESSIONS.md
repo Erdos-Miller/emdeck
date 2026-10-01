@@ -17,6 +17,17 @@ help find local agents. Existing local context readings are shown when
 available. View changes, filtering, and hiding the terminal panel do not
 disconnect sessions.
 
+To combine this window's terminals with background sessions, open the background
+sessions from the list, then click **Split view**. **Side by side**, **Stacked**
+and **Grid** arrange them together. Focusing a session keeps **All sessions**
+selected; switching back to Split view restores the full group. A workspace
+filter stays in place when you focus one of its sessions; selecting a session
+outside that filter returns to All sessions.
+
+Click **SPACES** to hide or show the workspace list above **SESSIONS**. Session
+search, attention controls and running terminals remain available. Emdeck
+remembers this choice independently of the compact sidebar setting.
+
 New terminals automatically reveal their space. The agent-overview button
 returns to **Panes** with the existing customizable local metrics panel open.
 

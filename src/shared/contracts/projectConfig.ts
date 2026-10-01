@@ -4,8 +4,8 @@ export const PROJECT_CONFIG_VERSION = 1;
 export const PROJECT_CONFIG_DIR = '.emdeck';
 export const PROJECT_CONFIG_FILE = 'settings.json';
 
-/** `reopenLastProject` is read before a project exists, so it cannot be overridden. */
-export type SettingsOverrides = Partial<Omit<Settings, 'reopenLastProject'>>;
+/** Startup and sound preferences belong to the user, never to a project file. */
+export type SettingsOverrides = Partial<Omit<Settings, 'reopenLastProject' | 'notifications'>>;
 
 export type WorkspaceOverrides = Partial<{
   layout: Layout;

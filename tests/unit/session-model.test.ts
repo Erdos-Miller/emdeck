@@ -3,9 +3,17 @@ import {
   localMachine,
   restoreMachines,
   sessionKey,
+  sessionTerminalSize,
   terminalInput,
 } from '../../src/features/agents/services/session-model';
 describe('persistent session model', () => {
+  it('matches the server grid limits without accepting unavailable font measurements', () => {
+    expect(sessionTerminalSize({ cols: 480, rows: 150 })).toEqual({ cols: 300, rows: 120 });
+    expect(sessionTerminalSize({ cols: 2, rows: 1 })).toEqual({ cols: 10, rows: 2 });
+    expect(sessionTerminalSize({ cols: 132, rows: 40 })).toEqual({ cols: 132, rows: 40 });
+    expect(sessionTerminalSize(undefined)).toBeUndefined();
+    expect(sessionTerminalSize({ cols: NaN, rows: 20 })).toBeUndefined();
+  });
   it('keeps machine namespaces separate and validates restored preferences', () => {
     expect(sessionKey('local', 'one')).not.toBe(sessionKey('remote', 'one'));
     expect(restoreMachines(null)).toEqual([localMachine]);

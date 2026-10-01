@@ -18,6 +18,7 @@ interface Props {
   onConnect: () => void;
   onDisconnect: () => void;
   onRemove: () => void;
+  onRemovePane: (machine: MachineConnection, pane: SessionPane) => void;
   onRename: (name: string) => void;
   onWorkspace: (key: string) => void;
   onAttach: (machine: MachineConnection, pane: SessionPane) => void;
@@ -34,6 +35,7 @@ export default function SessionMachineCard({
   onConnect,
   onDisconnect,
   onRemove,
+  onRemovePane,
   onRename,
   onWorkspace,
   onAttach,
@@ -129,10 +131,7 @@ export default function SessionMachineCard({
                     .catch(error => onError(String(error)));
                 const handleRestart = () => restart(false);
                 const handleResume = () => restart(true);
-                const handleRemovePane = () =>
-                  void sessionCall(machine.connection!, 'pane.remove', { id: pane.id }).catch(
-                    error => onError(String(error))
-                  );
+                const handleRemovePane = () => onRemovePane(machine, pane);
                 return (
                   <div className={`session-agent-row ${open ? 'is-attached' : ''}`} key={pane.id}>
                     <button type='button' disabled={!machine.connection} onClick={handleAttach}>

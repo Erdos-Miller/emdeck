@@ -4,6 +4,7 @@ import type { SessionDeskController } from '../hooks/useSessionDesk';
 import type { Settings } from '../../../shared/contracts/workspace';
 import { sessionName } from '../services/terminal-title';
 import SessionTerminal from './SessionTerminal';
+import HideSessionButton from './HideSessionButton';
 
 export default function BackgroundTerminal({
   session,
@@ -12,6 +13,7 @@ export default function BackgroundTerminal({
   arrangeControl,
   onMaximize,
   onDetach,
+  onHide,
   onFocus,
   focusRequest,
 }: {
@@ -21,18 +23,22 @@ export default function BackgroundTerminal({
   arrangeControl?: ReactNode;
   onMaximize: () => void;
   onDetach: () => void;
+  onHide: () => void;
   onFocus: () => void;
   focusRequest: number;
 }) {
   const { machine, pane } = session;
-  const handleStop = () => model.setStop({ machine, pane });
+  const handleStop = () => model.requestOperation('stop', machine, pane);
+  const handleRemove = () => model.requestOperation('remove', machine, pane);
   return machine.connection ? (
     <SessionTerminal
       connection={machine.connection}
       pane={pane}
       settings={settings}
       onDetach={onDetach}
+      onHide={onHide}
       onStop={handleStop}
+      onRemove={handleRemove}
       onMaximize={onMaximize}
       arrangeControl={arrangeControl}
       onFocus={onFocus}
@@ -42,6 +48,7 @@ export default function BackgroundTerminal({
     <div className='session-disconnected'>
       {arrangeControl}
       <strong>{sessionName(pane)}</strong>
+      <HideSessionButton name={sessionName(pane)} onHide={onHide} />
       <p>
         {machine.profile.name} is offline. Last reported state: {pane.agent.state}. Input is
         disabled.

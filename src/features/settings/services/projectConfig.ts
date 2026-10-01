@@ -94,6 +94,7 @@ export const mergeSettings = (global: Settings, overrides: SettingsOverrides): S
   ...global,
   ...overrides,
   reopenLastProject: global.reopenLastProject,
+  notifications: global.notifications,
 });
 
 /**

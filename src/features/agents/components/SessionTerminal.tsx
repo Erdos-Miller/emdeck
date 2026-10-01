@@ -7,19 +7,22 @@ import type { ReactNode } from 'react';
 import { sessionCall } from '../../../platform/desktop/sessions';
 import type { SessionPane, SessionRead } from '../../../shared/contracts/sessions';
 import type { Settings } from '../../../shared/contracts/workspace';
-import { terminalInput } from '../services/session-model';
+import { sessionTerminalSize, terminalInput } from '../services/session-model';
 import { createSessionInput } from '../services/session-input';
 import { createTerminalFitter } from '../services/terminal-fit';
 import { bindTerminalAttachments } from '../lib/terminalAttachments';
 import { bindTerminalKeyboard } from '../lib/terminalKeyboard';
 import { terminalFont } from '../lib/terminal-font';
+import HideSessionButton from './HideSessionButton';
 
 interface Props {
   connection: string;
   pane: SessionPane;
   settings: Settings;
   onDetach: () => void;
+  onHide: () => void;
   onStop: () => void;
+  onRemove: () => void;
   onMaximize: () => void;
   arrangeControl?: ReactNode;
   onFocus?: () => void;
@@ -30,7 +33,9 @@ export default function SessionTerminal({
   pane,
   settings,
   onDetach,
+  onHide,
   onStop,
+  onRemove,
   onMaximize,
   arrangeControl,
   onFocus,
@@ -49,7 +54,8 @@ export default function SessionTerminal({
   useEffect(() => {
     if (!host.current) return;
     let disposed = false,
-      owned = false;
+      owned = false,
+      replaying = true;
     const client = crypto.randomUUID();
     const term = new Terminal({
       fontSize: appearance.current.terminalFontSize,
@@ -65,10 +71,17 @@ export default function SessionTerminal({
     term.loadAddon(fit);
     term.open(host.current);
     terminal.current = term;
-    const fitter = createTerminalFitter(term, () => fit.fit(), {
-      request: callback => requestAnimationFrame(callback),
-      cancel: id => cancelAnimationFrame(id),
-    });
+    const fitter = createTerminalFitter(
+      term,
+      () => {
+        const size = sessionTerminalSize(fit.proposeDimensions());
+        if (size) term.resize(size.cols, size.rows);
+      },
+      {
+        request: callback => requestAnimationFrame(callback),
+        cancel: id => cancelAnimationFrame(id),
+      }
+    );
     const element = host.current;
     element.addEventListener('wheel', fitter.cancel, { capture: true, passive: true });
     element.addEventListener('pointerdown', fitter.cancel, true);
@@ -91,15 +104,33 @@ export default function SessionTerminal({
     bindTerminalKeyboard(term, error => {
       if (!disposed) setAttachmentError(String(error));
     });
+    let resizing: Promise<void> | undefined;
+    let pendingSize: { cols: number; rows: number } | undefined;
     const resize = () => {
-      if (disposed || !owned || !host.current?.clientWidth || !host.current.clientHeight) return;
+      if (
+        disposed ||
+        !owned ||
+        replaying ||
+        !host.current?.clientWidth ||
+        !host.current.clientHeight
+      )
+        return resizing;
       fitter.fit();
-      void sessionCall(connection, 'pane.resize', {
-        id: pane.id,
-        client,
-        cols: term.cols,
-        rows: term.rows,
-      }).catch(report);
+      pendingSize = { cols: term.cols, rows: term.rows };
+      // Send one resize at a time; rapid drags replace the pending size.
+      if (!resizing)
+        resizing = (async () => {
+          while (pendingSize && !disposed && owned) {
+            const size = pendingSize;
+            pendingSize = undefined;
+            await sessionCall(connection, 'pane.resize', { id: pane.id, client, ...size });
+          }
+        })()
+          .catch(report)
+          .finally(() => {
+            resizing = undefined;
+          });
+      return resizing;
     };
     const observer = new ResizeObserver(resize);
     resizeCurrent.current = resize;
@@ -126,7 +157,6 @@ export default function SessionTerminal({
           return;
         }
         owned = true;
-        resize();
         let after: number | null = null;
         while (!disposed) {
           const result: SessionRead = await sessionCall(connection, 'pane.read', {
@@ -135,13 +165,27 @@ export default function SessionTerminal({
             wait_ms: 20000,
           });
           if (disposed) break;
-          if (result.reset) term.reset();
+          if (result.reset) {
+            replaying = true;
+            fitter.cancel();
+            term.reset();
+            // Decode the snapshot in its original grid before fitting the view.
+            // Otherwise saved cursor moves and soft wraps paint different cells.
+            const size = sessionTerminalSize(result.pane);
+            if (size) term.resize(size.cols, size.rows);
+          }
           const bytes = Uint8Array.from(atob(result.data), c => c.charCodeAt(0));
           await new Promise<void>(resolve => term.write(bytes, resolve));
+          if (disposed) break;
           after = result.sequence;
           if (!result.pane.running) {
             owned = false;
+            if (result.reset) fitter.fit();
             break;
+          }
+          if (result.reset) {
+            replaying = false;
+            await resize();
           }
         }
       } catch (error) {
@@ -209,12 +253,19 @@ export default function SessionTerminal({
           {pane.agent.state}
         </span>
         <span className='spacer' />
+        <HideSessionButton name={sessionName(pane)} onHide={onHide} />
         <button title='Maximize or restore session' onClick={onMaximize}>
           Expand
         </button>
-        <button title='Stop process on its machine' disabled={!pane.running} onClick={onStop}>
-          Stop
-        </button>
+        {pane.running ? (
+          <button title='Stop process on its machine' onClick={onStop}>
+            Stop
+          </button>
+        ) : (
+          <button title='Remove stopped session from its machine' onClick={onRemove}>
+            Remove
+          </button>
+        )}
         <button title='Detach view; keep process running' onClick={onDetach}>
           Detach
         </button>
