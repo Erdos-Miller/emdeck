@@ -1,5 +1,14 @@
 # React audit — 0.1.19
 
+## Unreleased — readable task pane names
+
+React Doctor 0.9.13 reports the same eight reviewed errors and 74 warnings as
+the preceding audit, with no new rule/file findings. Header wrappers and title
+labels add no state, effects or terminal lifecycle changes. Pane-width CSS keeps
+names above controls in crowded layouts; browser checks cover long names,
+keyboard renaming, local and background sessions, and retained terminal mounts.
+No diagnostics were suppressed.
+
 ## Unreleased — hide individual sessions
 
 React Doctor 0.9.13 retains eight reviewed errors and 74 warnings, with no new

@@ -49,7 +49,7 @@ export default function SessionTabs({
             onDoubleClick={handleRename}
           >
             <i style={{ background: pane.color }} />
-            {paneName(pane)}
+            <span className='session-tab-name'>{paneName(pane)}</span>
           </button>
         );
       })}
@@ -61,9 +61,9 @@ export default function SessionTabs({
             className={workspace.maxBackground === session.key ? 'active' : ''}
             aria-pressed={workspace.maxBackground === session.key}
             onClick={handleSelect}
-            title={`${session.machine.profile.name} · Background`}
+            title={`${sessionName(session.pane)} · ${session.machine.profile.name} · Background`}
           >
-            {sessionName(session.pane)} · Background
+            <span className='session-tab-name'>{sessionName(session.pane)} · Background</span>
           </button>
         );
       })}

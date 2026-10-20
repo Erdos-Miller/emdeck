@@ -352,58 +352,62 @@ export default function TerminalPane({
       onFocusCapture={onFocus}
     >
       <header className='pane-header'>
-        <span className='pane-icon' style={{ color: pane.color }}>
-          <TerminalSquare size={13} />
-        </span>
-        {/* The name is distinct from the Agents overview's "Rename <name>"
+        <div className='pane-heading'>
+          <span className='pane-icon' style={{ color: pane.color }}>
+            <TerminalSquare size={13} />
+          </span>
+          {/* The name is distinct from the Agents overview's "Rename <name>"
             button: two controls must not answer to one accessible name. */}
-        <button
-          className='pane-title'
-          title={`Rename ${paneName(pane)} terminal`}
-          aria-label={`Rename ${paneName(pane)} terminal`}
-          onClick={onRename}
-        >
-          {paneName(pane)}
-        </button>
-        <span
-          className={`pane-state ${state}`}
-          title='Agent activity is detected from the live terminal screen. Connected and Output describe the terminal connection only.'
-        >
-          <i />
-          {pane.remote ? remoteStatus(state) : agentStatus(state, observation).label}
-        </span>
-        <span className='spacer' />
-        <HideSessionButton name={paneName(pane)} onHide={onHide} />
-        <button
-          className='icon-button'
-          title='Copy selected terminal text'
-          onClick={handleCopySelectedTerminalTextClick}
-        >
-          <Copy size={12} />
-        </button>
-        {(state === 'exited' || state === 'error') && (
+          <button
+            className='pane-title'
+            title={`Rename ${paneName(pane)} terminal`}
+            aria-label={`Rename ${paneName(pane)} terminal`}
+            onClick={onRename}
+          >
+            <span className='pane-title-text'>{paneName(pane)}</span>
+          </button>
+        </div>
+        <div className='pane-controls'>
+          <span
+            className={`pane-state ${state}`}
+            title='Agent activity is detected from the live terminal screen. Connected and Output describe the terminal connection only.'
+          >
+            <i />
+            <span>{pane.remote ? remoteStatus(state) : agentStatus(state, observation).label}</span>
+          </span>
+          <span className='spacer' />
+          <HideSessionButton name={paneName(pane)} onHide={onHide} />
           <button
             className='icon-button'
-            title={pane.remote ? 'Reconnect remote session' : 'Restart terminal'}
-            onClick={onRestart}
+            title='Copy selected terminal text'
+            onClick={handleCopySelectedTerminalTextClick}
           >
-            <RotateCcw size={12} />
+            <Copy size={12} />
           </button>
-        )}
-        <button
-          className='icon-button'
-          title={maximized ? 'Restore pane' : 'Maximize pane'}
-          onClick={onMaximize}
-        >
-          {maximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-        </button>
-        <button
-          className='icon-button'
-          title={`${pane.remote ? 'Disconnect' : 'Close'} ${paneName(pane)}`}
-          onClick={onClose}
-        >
-          <X size={13} />
-        </button>
+          {(state === 'exited' || state === 'error') && (
+            <button
+              className='icon-button'
+              title={pane.remote ? 'Reconnect remote session' : 'Restart terminal'}
+              onClick={onRestart}
+            >
+              <RotateCcw size={12} />
+            </button>
+          )}
+          <button
+            className='icon-button'
+            title={maximized ? 'Restore pane' : 'Maximize pane'}
+            onClick={onMaximize}
+          >
+            {maximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+          </button>
+          <button
+            className='icon-button'
+            title={`${pane.remote ? 'Disconnect' : 'Close'} ${paneName(pane)}`}
+            onClick={onClose}
+          >
+            <X size={13} />
+          </button>
+        </div>
       </header>
       <div className='terminal-host' ref={host} />
       <footer className='pane-footer'>

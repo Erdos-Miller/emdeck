@@ -314,6 +314,12 @@
   overflow: hidden;
   white-space: nowrap;
 }
+.session-tab-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
 /* The maximized tab already owns the filled background, so focus is marked by
    an underline instead: both can be true at once and must stay legible. */
 .session-tabs button.focused {
