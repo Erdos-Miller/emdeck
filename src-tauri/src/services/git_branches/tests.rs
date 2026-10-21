@@ -43,14 +43,26 @@ fn oid(root: &Path, reference: &str) -> String {
     run(root, &["rev-parse", reference]).unwrap()
 }
 
+fn advance_remote(root: &Path, remote: &str, branch: &str) {
+    let tracking = format!("refs/remotes/origin/{branch}");
+    let cached = oid(root, &tracking);
+    run(
+        root,
+        &["push", remote, &format!("HEAD:refs/heads/{branch}")],
+    )
+    .unwrap();
+    // Git may update a matching remote's tracking ref even when pushing by URL.
+    // Model another clone advancing the remote while our local cache stays stale.
+    run(root, &["update-ref", &tracking, cached.trim()]).unwrap();
+}
+
 #[test]
 fn fetch_indicators_and_update_another_branch_without_checkout() {
     let (_temp, root, remote) = init();
     run(&root, &["switch", "-c", "remote-change"]).unwrap();
     write_commit(&root, "remote.txt", "incoming\n", "Incoming");
     let tip = oid(&root, "HEAD");
-    // Publish via URL so the cached origin/main remains at its old value.
-    run(&root, &["push", &remote, "HEAD:refs/heads/main"]).unwrap();
+    advance_remote(&root, &remote, "main");
     run(&root, &["switch", "main"]).unwrap();
     let details = branches(&root).unwrap();
     assert_eq!(
@@ -89,13 +101,13 @@ fn sync_refreshes_both_branches_and_merges_without_leaving_the_current_one() {
     let peer = oid(&root, "HEAD").trim().to_owned();
     write_commit(&root, "peer.txt", "peer\n", "Peer commit");
     let peer_tip = oid(&root, "HEAD");
-    run(&root, &["push", &remote, "HEAD:refs/heads/agent/task"]).unwrap();
+    advance_remote(&root, &remote, "agent/task");
     run(&root, &["reset", "--hard", &peer]).unwrap();
     run(&root, &["switch", "main"]).unwrap();
     let base = oid(&root, "HEAD").trim().to_owned();
     write_commit(&root, "shared.txt", "shared\n", "Shared work");
     let main_tip = oid(&root, "HEAD");
-    run(&root, &["push", &remote, "HEAD:refs/heads/main"]).unwrap();
+    advance_remote(&root, &remote, "main");
     run(&root, &["reset", "--hard", &base]).unwrap();
     run(&root, &["switch", "agent/task"]).unwrap();
 
@@ -132,7 +144,7 @@ fn update_refuses_divergence_and_dirty_current_branch() {
     let (_temp, root, remote) = init();
     run(&root, &["switch", "-c", "remote-change"]).unwrap();
     write_commit(&root, "remote.txt", "incoming", "Incoming");
-    run(&root, &["push", &remote, "HEAD:refs/heads/main"]).unwrap();
+    advance_remote(&root, &remote, "main");
     run(&root, &["switch", "main"]).unwrap();
     std::fs::write(root.join("file.txt"), "keep dirty").unwrap();
     assert!(apply(&root, "update", "refs/heads/main")
@@ -315,7 +327,7 @@ fn checkout_update_and_resolved_rebase_continue() {
     let (_temp, root, remote) = init();
     run(&root, &["switch", "-c", "remote-tip"]).unwrap();
     write_commit(&root, "remote.txt", "new", "Incoming");
-    run(&root, &["push", &remote, "HEAD:refs/heads/main"]).unwrap();
+    advance_remote(&root, &remote, "main");
     apply(&root, "checkout-update", "refs/heads/main").unwrap();
     assert_eq!(current(&root).unwrap(), "main");
     assert!(root.join("remote.txt").exists());
