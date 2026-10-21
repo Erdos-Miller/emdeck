@@ -10,7 +10,25 @@ was a development-server/test-mocking advisory, not an identified runtime
 exploit in the packaged IDE. The upgraded unit and integration tests pass.
 `bun audit` is a blocking CI check, including development dependencies.
 
+Reviewed again on 2026-10-20 for PR #50: Vite 7.3.7 and source-map-js 1.2.2
+address the launch-editor advisories
+[GHSA-587h-7wmj-h5pm](https://github.com/advisories/GHSA-587h-7wmj-h5pm),
+[GHSA-698v-4r3x-3vcv](https://github.com/advisories/GHSA-698v-4r3x-3vcv),
+[GHSA-r825-w8mm-5pxw](https://github.com/advisories/GHSA-r825-w8mm-5pxw), and
+the source-map parsing advisory
+[GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q). Only
+the development dependency graph changes; production notices are unchanged.
+
 ## Rust
+
+The 2026-10-20 review updates rustls to 0.23.46 and rustls-webpki to 0.103.16.
+These compatible patches address
+[RUSTSEC-2026-0346](https://rustsec.org/advisories/RUSTSEC-2026-0346.html),
+[RUSTSEC-2026-0347](https://rustsec.org/advisories/RUSTSEC-2026-0347.html),
+[RUSTSEC-2026-0348](https://rustsec.org/advisories/RUSTSEC-2026-0348.html),
+[RUSTSEC-2026-0349](https://rustsec.org/advisories/RUSTSEC-2026-0349.html), and
+[RUSTSEC-2026-0382](https://rustsec.org/advisories/RUSTSEC-2026-0382.html). None
+of these vulnerability IDs is ignored.
 
 The four-target audit found maintenance advisories for the following transitive
 dependencies. The reviewed graph has no compatible replacement for these
@@ -36,6 +54,17 @@ configuration.
 | [RUSTSEC-2025-0081](https://rustsec.org/advisories/RUSTSEC-2025-0081) | unic-char-property | Tauri utilities → urlpattern          |
 | [RUSTSEC-2025-0098](https://rustsec.org/advisories/RUSTSEC-2025-0098) | unic-ucd-version   | Tauri utilities → urlpattern          |
 | [RUSTSEC-2025-0100](https://rustsec.org/advisories/RUSTSEC-2025-0100) | unic-ucd-ident     | Tauri utilities → urlpattern          |
+| [RUSTSEC-2026-0370](https://rustsec.org/advisories/RUSTSEC-2026-0370) | zvariant           | Linux Tauri single-instance → zbus 5  |
+| [RUSTSEC-2026-0371](https://rustsec.org/advisories/RUSTSEC-2026-0371) | zbus_names         | Linux Tauri single-instance → zbus 5  |
+| [RUSTSEC-2026-0372](https://rustsec.org/advisories/RUSTSEC-2026-0372) | zvariant_derive    | Linux Tauri single-instance → zbus 5  |
+
+The three zbus-related notices were reviewed on 2026-10-20. Upstream
+[merged these crates into zbus 6](https://github.com/z-galaxy/zbus/issues/2043).
+The locked single-instance plugin 2.4.4 uses zbus 5; the latest released plugin
+[2.5.4 also requires zbus ^5.9](https://crates.io/api/v1/crates/tauri-plugin-single-instance/2.5.4/dependencies).
+A compatible plugin update therefore cannot remove these crates yet. These
+specific maintenance acknowledgments remain until Tauri supports zbus 6; no
+vulnerability or unsoundness advisory is waived.
 
 `deny.toml` acknowledges only these exact maintenance IDs with reasons. All new
 advisories remain blocking. Unused acknowledgments fail CI, so they must be

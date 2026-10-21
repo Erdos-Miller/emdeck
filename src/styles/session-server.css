@@ -181,7 +181,6 @@
   text-overflow: ellipsis;
 }
 .session-terminal .pane-header {
-  flex-wrap: wrap;
   min-height: 34px;
   height: auto;
 }

@@ -29,6 +29,7 @@
 }
 
 .terminal-pane {
+  container: terminal-pane / inline-size;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -58,12 +59,30 @@
 
 .pane-icon {
   display: flex;
+  flex-shrink: 0;
 }
 
-.pane-header strong,
-.pane-header .pane-title {
+.pane-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pane-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.pane-title-text {
+  display: block;
   font-size: 10px;
   font-weight: 550;
+  line-height: 1.4;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,6 +91,10 @@
 /* The title reads as a label until pointed at, so the pane header keeps its
    quiet look while still advertising that the name is editable. */
 .pane-header .pane-title {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
   color: inherit;
   padding: 2px 4px;
   margin-left: -4px;
@@ -104,9 +127,17 @@
   font-size: 8px;
   color: var(--muted);
   margin-left: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.pane-state span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pane-state i {
+  flex-shrink: 0;
   width: 4px;
   height: 4px;
   border-radius: 50%;
@@ -128,6 +159,49 @@
 
 .pane-state.error i {
   background: var(--danger);
+}
+
+/* Let each pane adapt to its own width, even in a wide desktop window. */
+@container terminal-pane (max-width: 420px) {
+  .pane-header {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    gap: 3px;
+    padding: 6px 8px 4px;
+  }
+
+  .pane-heading {
+    flex: none;
+    align-items: flex-start;
+    min-height: 32px;
+  }
+
+  .pane-heading > .pane-icon {
+    margin-top: 3px;
+  }
+
+  .pane-title-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+
+  .pane-controls {
+    gap: 5px;
+    min-height: 21px;
+  }
+
+  .pane-controls > button {
+    flex-shrink: 0;
+  }
+
+  .pane-controls .pane-state {
+    margin-left: 0;
+  }
 }
 
 .terminal-host {

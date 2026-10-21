@@ -244,31 +244,37 @@ export default function SessionTerminal({
       aria-label={`${sessionName(pane)} persistent terminal`}
     >
       <header className='pane-header'>
-        {arrangeControl}
-        <strong title={sessionName(pane)}>{sessionName(pane)}</strong>
-        <span
-          className={`session-state ${pane.agent.state}`}
-          title={`${pane.agent.source}: ${pane.agent.reason}`}
-        >
-          {pane.agent.state}
-        </span>
-        <span className='spacer' />
-        <HideSessionButton name={sessionName(pane)} onHide={onHide} />
-        <button title='Maximize or restore session' onClick={onMaximize}>
-          Expand
-        </button>
-        {pane.running ? (
-          <button title='Stop process on its machine' onClick={onStop}>
-            Stop
+        <div className='pane-heading'>
+          {arrangeControl}
+          <strong className='pane-title-text' title={sessionName(pane)}>
+            {sessionName(pane)}
+          </strong>
+        </div>
+        <div className='pane-controls'>
+          <span
+            className={`session-state ${pane.agent.state}`}
+            title={`${pane.agent.source}: ${pane.agent.reason}`}
+          >
+            {pane.agent.state}
+          </span>
+          <span className='spacer' />
+          <HideSessionButton name={sessionName(pane)} onHide={onHide} />
+          <button title='Maximize or restore session' onClick={onMaximize}>
+            Expand
           </button>
-        ) : (
-          <button title='Remove stopped session from its machine' onClick={onRemove}>
-            Remove
+          {pane.running ? (
+            <button title='Stop process on its machine' onClick={onStop}>
+              Stop
+            </button>
+          ) : (
+            <button title='Remove stopped session from its machine' onClick={onRemove}>
+              Remove
+            </button>
+          )}
+          <button title='Detach view; keep process running' onClick={onDetach}>
+            Detach
           </button>
-        )}
-        <button title='Detach view; keep process running' onClick={onDetach}>
-          Detach
-        </button>
+        </div>
       </header>
       {error && (
         <div className='session-error' role='alert'>
