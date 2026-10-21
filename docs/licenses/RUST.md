@@ -1655,7 +1655,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Used by:
 
-- rustls-webpki 0.103.15 — https://crates.io/crates/rustls-webpki/0.103.15
+- rustls-webpki 0.103.16 — https://crates.io/crates/rustls-webpki/0.103.16
 
 ````text
 Except as otherwise noted, this project is licensed under the following
@@ -2910,7 +2910,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- rustls 0.23.45 — https://crates.io/crates/rustls/0.23.45
+- rustls 0.23.46 — https://crates.io/crates/rustls/0.23.46
 
 ````text
 Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>

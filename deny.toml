@@ -17,6 +17,9 @@ ignore = [
   { id = "RUSTSEC-2025-0081", reason = "unic-char-property via Tauri urlpattern; upstream maintenance notice, no compatible replacement." },
   { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version via Tauri urlpattern; upstream maintenance notice, no compatible replacement." },
   { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident via Tauri urlpattern; upstream maintenance notice, no compatible replacement." },
+  { id = "RUSTSEC-2026-0370", reason = "Linux zvariant via Tauri single-instance and zbus 5; merged into incompatible zbus 6. Latest plugin 2.5.4 still requires zbus 5. Maintenance notice reviewed 2026-10-20; revisit on Tauri updates." },
+  { id = "RUSTSEC-2026-0371", reason = "Linux zbus_names via Tauri single-instance and zbus 5; merged into incompatible zbus 6. Latest plugin 2.5.4 still requires zbus 5. Maintenance notice reviewed 2026-10-20; revisit on Tauri updates." },
+  { id = "RUSTSEC-2026-0372", reason = "Linux zvariant_derive via Tauri single-instance and zbus 5; merged into incompatible zbus 6. Latest plugin 2.5.4 still requires zbus 5. Maintenance notice reviewed 2026-10-20; revisit on Tauri updates." },
 ]
 unused-ignored-advisory = "deny"
 
